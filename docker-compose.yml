@@ -1,0 +1,28 @@
+version: "3.9"
+
+volumes:
+  cache:
+    driver: local   
+
+services:
+  db:
+    image: postgres
+    container_name: node-db
+    restart : always
+    environment:
+      POSTGRES_DB: "backend"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: 1234
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    ports:
+      - "5440:5432"
+
+  redis:
+    image: redis:7.2.4-alpine
+    restart: always
+    ports:
+      - '6223:6379'
+    command: redis-server --save 20 1 --loglevel warning --requirepass eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81
+    volumes: 
+      - cache:/data
