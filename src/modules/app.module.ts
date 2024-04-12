@@ -18,7 +18,6 @@ import { GameModule } from './business/game/game.module';
     }),
     PrismaModule,
     GameModule,
-    
   ],
 })
 export class AppModule {}
