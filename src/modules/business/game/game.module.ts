@@ -5,13 +5,13 @@ import { BullBoardModule } from '@bull-board/nestjs';
 import { EQueue } from 'src/libs/queues/queue.enum';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { PrismaModule } from 'src/modules/infrastructure/prisma/prisma.module';
-import { GameWorker } from './queue/game.worker';
+import { StartGameWorker, ReplishmentWalletWorker } from './queue/game.worker';
 
 @Module({
   imports: [
     PrismaModule,
     BullModule.registerQueue({
-       name: EQueue.START_BOT,
+      name: EQueue.START_BOT,
     }),
     BullBoardModule.forFeature({
       name: EQueue.START_BOT,
@@ -19,12 +19,19 @@ import { GameWorker } from './queue/game.worker';
     }),
     BullModule.registerQueue({
       name: EQueue.START_GAME_SESSION,
-   }),
-   BullBoardModule.forFeature({
-     name: EQueue.START_GAME_SESSION,
-     adapter: BullMQAdapter,
-   }),
+    }),
+    BullBoardModule.forFeature({
+      name: EQueue.START_GAME_SESSION,
+      adapter: BullMQAdapter,
+    }),
+    BullModule.registerQueue({
+      name: EQueue.REPLISHMENT_WALLET,
+    }),
+    BullBoardModule.forFeature({
+      name: EQueue.REPLISHMENT_WALLET,
+      adapter: BullMQAdapter,
+    }),
   ],
-  providers: [GameService, GameWorker],
+  providers: [GameService, StartGameWorker, ReplishmentWalletWorker],
 })
-export class GameModule {}
+export class GameModule { }

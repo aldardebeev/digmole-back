@@ -7,6 +7,6 @@ export class AppController {
 
   @Get('login')
   getHello(): any {
-    return this.appService.getHello();
+    // return this.appService.getHello();
   }
 }
