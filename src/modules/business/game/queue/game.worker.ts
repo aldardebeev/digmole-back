@@ -8,9 +8,9 @@ import { GameService } from '../game.service';
 export class StartGameWorker extends WorkerHost {
     constructor(private readonly gameService: GameService) { super()}
 
-    async process(job: Job<{chatId: string, username: string}, string, string>, token?: string): Promise<any> {
-        const { chatId, username } = job.data;
-        return await this.gameService.createUser(chatId, username);
+    async process(job: Job<{chatId: string, username: string, address: string}, string, string>, token?: string): Promise<any> {
+        const { chatId, username, address } = job.data;
+        return await this.gameService.createUser(chatId, username, address);
     }
 }
 

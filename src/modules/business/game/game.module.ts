@@ -10,27 +10,10 @@ import { StartGameWorker, ReplishmentWalletWorker } from './queue/game.worker';
 @Module({
   imports: [
     PrismaModule,
-    BullModule.registerQueue({
-      name: EQueue.START_BOT,
-    }),
-    BullBoardModule.forFeature({
-      name: EQueue.START_BOT,
-      adapter: BullMQAdapter,
-    }),
-    BullModule.registerQueue({
-      name: EQueue.START_GAME_SESSION,
-    }),
-    BullBoardModule.forFeature({
-      name: EQueue.START_GAME_SESSION,
-      adapter: BullMQAdapter,
-    }),
-    BullModule.registerQueue({
-      name: EQueue.REPLISHMENT_WALLET,
-    }),
-    BullBoardModule.forFeature({
-      name: EQueue.REPLISHMENT_WALLET,
-      adapter: BullMQAdapter,
-    }),
+    ...Object.values(EQueue).flatMap((queue) => [
+        BullModule.registerQueue({ name: queue }),
+        BullBoardModule.forFeature({ name: queue, adapter: BullMQAdapter })
+    ]),
   ],
   providers: [GameService, StartGameWorker, ReplishmentWalletWorker],
 })
