@@ -1,0 +1,38 @@
+{
+    "listeners": {
+        "*:80": {
+            "pass": "routes"
+        }
+    },
+
+    "routes": [
+        {
+            "match": {
+                "uri": "!/index.php"
+            },
+            "action": {
+                "share": "/var/www/html/public$uri",
+                "fallback": {
+                    "pass": "applications/laravel"
+                }
+            }
+        }
+    ],
+
+    "applications": {
+        "laravel": {
+            "type": "php",
+            "limits": {
+                "requests": 500,
+                "timeout": 10
+            },
+            "processes": {
+                "max": 200,
+                "spare": 10,
+                "idle_timeout": 30
+            },
+            "root": "/var/www/html/public/",
+            "script": "index.php"
+        }
+    }
+}
