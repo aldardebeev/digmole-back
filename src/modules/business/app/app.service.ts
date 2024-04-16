@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import { WalletSourceType } from '@prisma/client';
 import { Address, PublicKey, SecretKey, Transaction } from '@umi-top/umi-core-js'
 
 @Injectable()
@@ -16,12 +15,12 @@ export class AppService {
       data: {
         chatId: chatId,
         username: username,
-        Wallets: {
-          create: [{ type: WalletSourceType.INTERNAL, address: address.getBech32() }],
+        Wallet: {
+          create: {  address: address.getBech32() },
         },
       },
       include: {
-        Wallets: true,
+        Wallet: true,
       },
     });
 

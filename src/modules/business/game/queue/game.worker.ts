@@ -14,11 +14,11 @@ export class StartGameWorker extends WorkerHost {
     }
 }
 
-@Processor(EQueue.REPLISHMENT_WALLET)
+@Processor(EQueue.CHECK_SIGNATURE)
 export class ReplishmentWalletWorker extends WorkerHost { 
     constructor(private readonly gameService: GameService) { super()}
-    async process(job: Job<{chatId: string, amount: string}, string, string>, token?: string): Promise<any> {
-        const { chatId, amount } = job.data;
-        return await this.gameService.replishmentWallet(chatId, amount);
+    async process(job: Job<{chatId: string, signature: string}, string, string>, token?: string): Promise<any> {
+        const { chatId, signature } = job.data;
+        return await this.gameService.checkSignature(chatId, signature);
     }
 }

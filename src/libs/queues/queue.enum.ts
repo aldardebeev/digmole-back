@@ -3,4 +3,5 @@ export enum EQueue {
   REPLISHMENT_WALLET = 'replishment-wallet',
   START_GAME_SESSION = 'start-game-session',
   NOTIFICATION = 'notification',
+  CHECK_SIGNATURE = 'check-signature',
 }
