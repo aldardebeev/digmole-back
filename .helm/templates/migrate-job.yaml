@@ -1,0 +1,32 @@
+{{- if .Values.migrate.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-migrate
+  namespace: {{ .Values.namespace }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation
+  labels:
+    app: {{ .Release.Name }}-migrate
+spec:
+  activeDeadlineSeconds: 180
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-migrate
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: {{ .Values.imagePullSecrets }}
+      containers:
+        - name: migrate-db
+          image: "{{ .Values.image }}"
+          command:
+            {{- toYaml .Values.migrate.command | nindent 12 }}
+          args:
+            {{- toYaml .Values.migrate.args | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+{{- end }}
