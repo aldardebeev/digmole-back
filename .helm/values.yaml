@@ -62,7 +62,7 @@ ingress:
   annotations: {}
   #    nginx.ingress.kubernetes.io/rewrite-target: /$2
   #    nginx.ingress.kubernetes.io/auth-realm: realm string
-  host: $k8s_domain_name_develop
+  host: $DOMAIN_NAME
   path: /backend(/|$)(.*)
   pathType: Prefix
   portNumber: 3000
