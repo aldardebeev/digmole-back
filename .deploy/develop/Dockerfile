@@ -1,22 +1,21 @@
-FROM composer:2.1.9 as vendor
-WORKDIR app
-COPY . .
-RUN composer install \
-    --ignore-platform-reqs \
-    --no-interaction \
-    --no-plugins \
-    --no-scripts \
-    --prefer-dist
+FROM node:20.11.0-bullseye-slim as build
 
-
-FROM harbor.smw.team/server-base/unit:1.27.0-php8.1
-WORKDIR /var/www/html
 ARG STAGE=develop
-COPY --from=vendor /app/* .
+WORKDIR /app
+COPY . .
+RUN cp -rf .deploy/$STAGE/.env . && \
+    yarn install --frozen-lockfile && \
+    yarn prisma generate && \
+    yarn run build && \
+    rm -rf .deploy
 
-RUN cp .deploy/$STAGE/config.json . &&\
-    cp .deploy/$STAGE/config.json /docker-entrypoint.d/config.json && \
-    cp .deploy/$STAGE/.env . && \
-    chmod -R 777 /var/www/html/storage && \
-    chmod -R 777 /var/www/html/bootstrap && \
-    rm -rf .deploy .git
+FROM node:20.11.0-bullseye-slim
+
+WORKDIR /app
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/.env ./.env
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/dist ./dist
+
+CMD ["yarn", "run", "start:prod"]
