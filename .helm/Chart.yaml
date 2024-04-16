@@ -1,0 +1,6 @@
+apiVersion: v2
+name: $CI_PROJECT_NAME
+description: $CI_PROJECT_NAME
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
