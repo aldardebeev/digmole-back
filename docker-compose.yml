@@ -1,22 +1,13 @@
 version: "3.9"
-
-volumes:
-  cache:
-    driver: local   
-
 services:
-  db:
-    image: postgres
-    container_name: node-db
-    restart : always
+  postgres:
+    image: postgres:14
     environment:
       POSTGRES_DB: "backend"
-      POSTGRES_USER: "postgres"
-      POSTGRES_PASSWORD: 1234
-    volumes:
-      - ./db:/var/lib/postgresql/data
+      POSTGRES_USER: "backend"
+      POSTGRES_PASSWORD: "GhjooOGY5lv8nOCXhj"
     ports:
-      - "5440:5432"
+      - "5437:5432"
 
   redis:
     image: redis:7.2.4-alpine
