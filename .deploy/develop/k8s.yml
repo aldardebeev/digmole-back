@@ -53,7 +53,7 @@ spec:
             - name: "POSTGRES_DB"
               value: "backend"
             - name: "POSTGRES_PASSWORD"
-              value: "b56Q1EPn5unK"
+              value: "jLs0kqqy7K8DRWg"
           resources:
             requests:
               memory: "512M"
