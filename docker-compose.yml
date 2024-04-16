@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: "backend"
       POSTGRES_USER: "backend"
-      POSTGRES_PASSWORD: "GhjooOGY5lv8nOCXhj"
+      POSTGRES_PASSWORD: "jLs0kqqy7K8DRWg"
     ports:
       - "5437:5432"
 
