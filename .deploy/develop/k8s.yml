@@ -114,10 +114,10 @@ spec:
         - name: $CI_PROJECT_NAME-db
           image: postgres:14.10-alpine
           env:
-            - name: "POSTGRES_USER"
-              value: "backend"
             - name: "POSTGRES_DB"
               value: "backdb"
+            - name: "POSTGRES_USER"
+              value: "backend"
             - name: "POSTGRES_PASSWORD"
               value: "4a36dfloqutnJFAmh23xjHI4S3l1mn3"
           resources:
