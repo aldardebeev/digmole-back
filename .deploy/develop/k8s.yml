@@ -53,7 +53,7 @@ spec:
         - name: "POSTGRES_DB"
           value: "backend"
         - name: "POSTGRES_PASSWORD"
-          value: "1234"
+          value: "qj0mNVQ8avTwD"
         resources:
           requests:
             memory: "256M"
@@ -142,3 +142,69 @@ spec:
           name: gcache-configmap
       enableServiceLinks: false
 ### end redis block ###
+---
+##### start backend block #######
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: $CI_PROJECT_NAME
+  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
+spec:
+  selector:
+    matchLabels:
+      app: $CI_PROJECT_NAME
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: $CI_PROJECT_NAME
+    spec:
+      containers:
+        - name: $CI_PROJECT_NAME
+          image: $HARBOR_REPO/$NAME_PROJECT/$TAG_IMAGE-$CI_COMMIT_BRANCH:$CI_COMMIT_SHORT_SHA
+          resources:
+            requests:
+              memory: "64M"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "1"
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: $NAME_PROJECT-harbor-robot
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: $CI_PROJECT_NAME-service
+  labels:
+    app: $CI_PROJECT_NAME
+  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
+spec:
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app: $CI_PROJECT_NAMEs
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: $CI_PROJECT_NAME-ingress
+  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
+spec:
+  rules:
+    - host: '$DOMAIN_NAME'
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: $CI_PROJECT_NAME-service
+                port:
+                  number: 3000
+##### END backend BLOCK #####
