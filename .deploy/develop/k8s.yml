@@ -1,78 +1,3 @@
-### start DB block ###
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: $CI_PROJECT_NAME-db-pvc
-  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
-spec:
-  storageClassName: managed-nfs-storage
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1G
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: $CI_PROJECT_NAME-db-service
-  labels:
-    app: $CI_PROJECT_NAME-db
-  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
-spec:
-  type: NodePort
-  ports:
-    - port: 5432
-      targetPort: 5432
-      protocol: TCP
-  selector:
-    app: $CI_PROJECT_NAME-db
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: $CI_PROJECT_NAME-db
-  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
-spec:
-  serviceName: $CI_PROJECT_NAME-db-service
-  selector:
-    matchLabels:
-      app: $CI_PROJECT_NAME-db
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: $CI_PROJECT_NAME-db
-    spec:
-      containers:
-        - name: $CI_PROJECT_NAME-db
-          image: postgres:14
-          env:
-            - name: "POSTGRES_USER"
-              value: "postgres"
-            - name: "POSTGRES_DB"
-              value: "backend"
-            - name: "POSTGRES_PASSWORD"
-              value: "qj0mNVQ8avTwD"
-          resources:
-            requests:
-              memory: "512M"
-              cpu: "100m"
-            limits:
-              memory: "2Gi"
-              cpu: "1"
-          ports:
-            - containerPort: 5432
-          volumeMounts:
-            - name: db-data
-              mountPath: /var/lib/postgresql/data
-      volumes:
-        - name: db-data
-          persistentVolumeClaim:
-            claimName: $CI_PROJECT_NAME-db-pvc
-      enableServiceLinks: false
-### end DB block ###
----
 ##### start backend block #######
 apiVersion: apps/v1
 kind: Deployment
@@ -138,3 +63,78 @@ spec:
                 port:
                   number: 3000
 ##### END backend BLOCK #####
+---
+### start DB block ###
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: $CI_PROJECT_NAME-db-pvc
+  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
+spec:
+  storageClassName: managed-nfs-storage
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1G
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: $CI_PROJECT_NAME-db-service
+  labels:
+    app: $CI_PROJECT_NAME-db
+  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
+spec:
+  type: NodePort
+  ports:
+    - port: 5432
+      targetPort: 5432
+      protocol: TCP
+  selector:
+    app: $CI_PROJECT_NAME-db
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: $CI_PROJECT_NAME-db
+  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
+spec:
+  serviceName: $CI_PROJECT_NAME-db-service
+  selector:
+    matchLabels:
+      app: $CI_PROJECT_NAME-db
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: $CI_PROJECT_NAME-db
+    spec:
+      containers:
+        - name: $CI_PROJECT_NAME-db
+          image: postgres:14.10-alpine
+          env:
+            - name: "POSTGRES_USER"
+              value: "backend"
+            - name: "POSTGRES_DB"
+              value: "backdb"
+            - name: "POSTGRES_PASSWORD"
+              value: "4a36dfloqutnJFAmh23xjHI4S3l1mn3"
+          resources:
+            requests:
+              memory: "512M"
+              cpu: "100m"
+            limits:
+              memory: "2Gi"
+              cpu: "1"
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: db-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: $CI_PROJECT_NAME-db-pvc
+      enableServiceLinks: false
+### end DB block ###
