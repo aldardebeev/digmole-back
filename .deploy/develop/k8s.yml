@@ -142,23 +142,3 @@ spec:
           name: gcache-configmap
       enableServiceLinks: false
 ### end redis block ###
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: $CI_PROJECT_NAME-ingress
-  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-spec:
-  rules:
-  - host: "$DOMAIN_NAME"
-    http:
-      paths:
-      - path: /api(/|$)(.*)
-        pathType: Prefix
-        backend:
-          service:
-            name: $CI_PROJECT_NAME-service
-            port:
-              number: 80
