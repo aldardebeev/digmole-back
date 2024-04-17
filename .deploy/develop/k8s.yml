@@ -1,4 +1,19 @@
-##### start backend block #######
+### start backend block ###
+apiVersion: v1
+kind: Service
+metadata:
+  name: $CI_PROJECT_NAME-service
+  labels:
+    app: $CI_PROJECT_NAME
+  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+  selector:
+    app: $CI_PROJECT_NAME
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,55 +29,50 @@ spec:
       labels:
         app: $CI_PROJECT_NAME
     spec:
+      initContainers:
+      - name: migrate-$CI_PROJECT_NAME
+        image: $HARBOR_REPO/$NAME_PROJECT/$CI_PROJECT_NAME-$CI_COMMIT_REF_NAME:$CI_COMMIT_SHORT_SHA
+        command: ['bash', '-c', "php artisan migrate --force"]
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "100m"
+          limits:
+            memory: "2Gi"
+            cpu: "1"
       containers:
-        - name: $CI_PROJECT_NAME
-          image: $HARBOR_REPO/$NAME_PROJECT/$TAG_IMAGE-$CI_COMMIT_BRANCH:$CI_COMMIT_SHORT_SHA
-          resources:
-            requests:
-              memory: "64M"
-              cpu: "100m"
-            limits:
-              memory: "1Gi"
-              cpu: "1"
+      - name: $CI_PROJECT_NAME
+        image: $HARBOR_REPO/$NAME_PROJECT/$CI_PROJECT_NAME-$CI_COMMIT_REF_NAME:$CI_COMMIT_SHORT_SHA
+        # livenessProbe:
+        #     failureThreshold: 3
+        #     httpGet:
+        #       path: /common/health
+        #       port: 80
+        #     periodSeconds: 20
+        #     successThreshold: 1
+        #     timeoutSeconds: 5
+        #     initialDelaySeconds: 10
+        # readinessProbe:
+        #     failureThreshold: 3
+        #     httpGet:
+        #       path: /common/health
+        #       port: 80
+        #     periodSeconds: 10
+        #     successThreshold: 1
+        #     timeoutSeconds: 2
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "100m"
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+        ports:
+        - containerPort: 80
       enableServiceLinks: false
       imagePullSecrets:
         - name: $NAME_PROJECT-harbor-robot
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: $CI_PROJECT_NAME-service
-  labels:
-    app: $CI_PROJECT_NAME
-  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
-spec:
-  ports:
-    - port: 3000
-      targetPort: 3000
-      protocol: TCP
-  selector:
-    app: $CI_PROJECT_NAME
-
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: $CI_PROJECT_NAME-ingress
-  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
-spec:
-  rules:
-    - host: '$DOMAIN_NAME'
-      http:
-        paths:
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: $CI_PROJECT_NAME-service
-                port:
-                  number: 3000
-##### END backend BLOCK #####
+### end backend block ###
 ---
 ### start DB block ###
 apiVersion: v1
@@ -76,7 +86,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1G
+      storage: 5G
 ---
 apiVersion: v1
 kind: Service
@@ -88,9 +98,9 @@ metadata:
 spec:
   type: NodePort
   ports:
-    - port: 5432
-      targetPort: 5432
-      protocol: TCP
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
   selector:
     app: $CI_PROJECT_NAME-db
 ---
@@ -111,30 +121,120 @@ spec:
         app: $CI_PROJECT_NAME-db
     spec:
       containers:
-        - name: $CI_PROJECT_NAME-db
-          image: postgres:14.10-alpine
-          env:
-            - name: "POSTGRES_USER"
-              value: "backend"
-            - name: "POSTGRES_PASSWORD"
-              value: "4a36dfloqutnJFAmh23xjHI4S3l1mn3"
-            - name: "POSTGRES_DB"
-              value: "backdb"
-          resources:
-            requests:
-              memory: "512M"
-              cpu: "100m"
-            limits:
-              memory: "2Gi"
-              cpu: "1"
-          ports:
-            - containerPort: 5432
-          volumeMounts:
-            - name: db-data
-              mountPath: /var/lib/postgresql/data
-      volumes:
+      - name: $CI_PROJECT_NAME-db
+        image: postgres:16.2-alpine
+        env:
+        - name: "POSTGRES_USER"
+          value: "postgres"
+        - name: "POSTGRES_DB"
+          value: "backend"
+        - name: "POSTGRES_PASSWORD"
+          value: "1234"
+        resources:
+          requests:
+            memory: "256M"
+            cpu: "100m"
+          limits:
+            memory: "512M"
+            cpu: "1"
+        ports:
+        - containerPort: 5432
+        volumeMounts:
         - name: db-data
-          persistentVolumeClaim:
-            claimName: $CI_PROJECT_NAME-db-pvc
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: db-data
+        persistentVolumeClaim:
+          claimName: $CI_PROJECT_NAME-db-pvc
       enableServiceLinks: false
 ### end DB block ###
+---
+### start redis block ###
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gcache-configmap
+  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
+data:
+  keydb.conf: |
+    daemonize no
+    appendonly no
+    tcp-backlog 5110
+    loglevel warning
+    server-threads 2
+    protected-mode no
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: $CI_PROJECT_NAME-gcache-service
+  labels:
+    app: $CI_PROJECT_NAME-gcache
+  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
+spec:
+  type: NodePort
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP
+  selector:
+    app: $CI_PROJECT_NAME-gcache
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: $CI_PROJECT_NAME-gcache
+  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
+spec:
+  serviceName: $CI_PROJECT_NAME-gcache-service
+  selector:
+    matchLabels:
+      app: $CI_PROJECT_NAME-gcache
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: $CI_PROJECT_NAME-gcache
+    spec:
+      containers:
+      - name: $CI_PROJECT_NAME-gcache
+        image: eqalpha/keydb:alpine_x86_64_v6.2.0
+        resources:
+          requests:
+            memory: "64M"
+            cpu: "100m"
+          limits:
+            memory: "128M"
+            cpu: "1"
+        ports:
+        - containerPort: 6379
+        volumeMounts:
+        - name: config
+          mountPath: /etc/keydb/keydb.conf
+          subPath: keydb.conf
+      volumes:
+      - name: config
+        configMap:
+          name: gcache-configmap
+      enableServiceLinks: false
+### end redis block ###
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: $CI_PROJECT_NAME-ingress
+  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  rules:
+  - host: "$DOMAIN_NAME"
+    http:
+      paths:
+      - path: /api(/|$)(.*)
+        pathType: Prefix
+        backend:
+          service:
+            name: $CI_PROJECT_NAME-service
+            port:
+              number: 80
