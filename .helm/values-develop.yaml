@@ -70,12 +70,12 @@ ingress:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
   #    nginx.ingress.kubernetes.io/auth-realm: realm string
   host: $DOMAIN_NAME
-  path: /backend(/|$)(.*)
+  path: /api(/|$)(.*)
   pathType: Prefix
   portNumber: 3000
 
 migrate:
-  enabled: true
+  enabled: false
   command:
     - yarn
   args:
