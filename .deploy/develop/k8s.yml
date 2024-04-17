@@ -86,7 +86,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 5G
+      storage: 1G
 ---
 apiVersion: v1
 kind: Service
@@ -143,9 +143,9 @@ spec:
         - name: db-data
           mountPath: /var/lib/postgresql/data
       volumes:
-      - name: db-data
-        persistentVolumeClaim:
-          claimName: $CI_PROJECT_NAME-db-pvc
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: $CI_PROJECT_NAME-db-pvc
       enableServiceLinks: false
 ### end DB block ###
 ---
