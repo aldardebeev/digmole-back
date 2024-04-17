@@ -135,10 +135,10 @@ spec:
             memory: "256M"
             cpu: "100m"
           limits:
-            memory: "512M"
+            memory: "1024M"
             cpu: "1"
         ports:
-        - containerPort: 5432
+        - containerPort: 5437
         volumeMounts:
         - name: db-data
           mountPath: /var/lib/postgresql/data
