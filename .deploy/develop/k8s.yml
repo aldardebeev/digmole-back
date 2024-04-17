@@ -138,7 +138,7 @@ spec:
             memory: "1024M"
             cpu: "1"
         ports:
-        - containerPort: 5437
+        - containerPort: 5432
         volumeMounts:
         - name: db-data
           mountPath: /var/lib/postgresql/data
