@@ -117,7 +117,7 @@ spec:
       targetPort: 3000
       protocol: TCP
   selector:
-    app: $CI_PROJECT_NAMEs
+    app: $CI_PROJECT_NAME
 
 ---
 apiVersion: networking.k8s.io/v1
@@ -138,73 +138,3 @@ spec:
                 port:
                   number: 3000
 ##### END backend BLOCK #####
----
-### start redis block ###
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: gcache-configmap
-  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
-data:
-  keydb.conf: |
-    daemonize no
-    appendonly no
-    tcp-backlog 5110
-    loglevel warning
-    server-threads 2
-    protected-mode no
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: $CI_PROJECT_NAME-gcache-service
-  labels:
-    app: $CI_PROJECT_NAME-gcache
-  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
-spec:
-  type: NodePort
-  ports:
-  - port: 6379
-    targetPort: 6379
-    protocol: TCP
-  selector:
-    app: $CI_PROJECT_NAME-gcache
----
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: $CI_PROJECT_NAME-gcache
-  namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
-spec:
-  serviceName: $CI_PROJECT_NAME-gcache-service
-  selector:
-    matchLabels:
-      app: $CI_PROJECT_NAME-gcache
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: $CI_PROJECT_NAME-gcache
-    spec:
-      containers:
-      - name: $CI_PROJECT_NAME-gcache
-        image: eqalpha/keydb:alpine_x86_64_v6.2.0
-        resources:
-          requests:
-            memory: "64M"
-            cpu: "100m"
-          limits:
-            memory: "128M"
-            cpu: "1"
-        ports:
-        - containerPort: 6379
-        volumeMounts:
-        - name: config
-          mountPath: /etc/keydb/keydb.conf
-          subPath: keydb.conf
-      volumes:
-      - name: config
-        configMap:
-          name: gcache-configmap
-      enableServiceLinks: false
-### end redis block ###
