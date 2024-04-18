@@ -14,23 +14,103 @@ datasource db {
 }
 
 model User {
-  id              Int      @id @default(autoincrement())
-  chatId          String   @map("chat_id")
-  username        String   @map("username")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  Wallet          Wallet?
+  id        Int      @id @default(autoincrement()) @db.SmallInt
+  chatId    String   @map("chat_id") @db.VarChar(256)
+  username  String   @map("username") @db.VarChar(256)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  Wallet    Wallet?
 
+  @@index([id])
   @@map("users")
 }
 
 model Wallet {
-  id      Int    @id @default(autoincrement())
-  address String
+  id     Int  @id @default(autoincrement()) @db.SmallInt
+  user   User @relation(fields: [userId], references: [id])
+  userId Int  @unique @map("user_id")
+
+  address String @db.VarChar(256)
+
+  signaturePhrase String? @map("signature_phrase") @db.VarChar(256)
+
+  WalletInputTrancation WalletInputTranscation[]
+  WalletAppTrancation   WalletAppTrancation[]
+  WalletBalance         WalletBalance[]
+
+  @@index([id])
+  @@map("wallets")
+}
+
+model WalletBalance {
+  id Int @id @default(autoincrement()) @db.SmallInt
+
+  Wallet   Wallet @relation(fields: [walletId], references: [id])
+  walletId Int    @map("wallet_id")
+
+  ccy                CcyEnum @map("ccy")
+  amountApp          Float   @map("amount_app")
+  amountAppDeposited Float   @map("amount_app_deposited")
+  amountLocked       Float   @map("amount_locked")
+
+  @@index([id])
+  @@map("wallet_balances")
+}
+
+model WalletAppTrancation {
+  id Int @id @default(autoincrement()) @db.SmallInt
+
+  Wallet   Wallet @relation(fields: [walletId], references: [id])
+  walletId Int    @map("wallet_id")
+
+  ccy         CcyEnum             @map("ccy")
+  type        TransactionTypeEnum @map("type")
+  amount      Float               @map("amount")
+  isDeposited Boolean             @map("is_deposited")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  undepositedAt DateTime @default(now()) @map("undeposited_at")
+
+  parentWalletAppTransactionId DateTime @default(now()) @map("undepositparent_wallet_app_transaction_ided_at")
+
+  WalletInputTrancation WalletInputTranscation?
+
+  @@index([id])
+  @@map("wallet_app_transcations")
+}
+
+model WalletInputTranscation {
+  id Int @id @default(autoincrement()) @db.SmallInt
+
+  Wallet   Wallet @relation(fields: [walletId], references: [id])
+  walletId Int    @map("wallet_id")
+
+  ccy         CcyEnum
+  amount      Float
+  fromAddress String  @db.VarChar(256)
+  tx          String  @db.VarChar(256)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  user      User     @relation(fields: [userId], references: [id])
-  userId    Int      @unique
-  signaturePhrase String?   @map("signature_phrase")
+
+  WalletAppTrancation WalletAppTrancation @relation(fields: [AppTransactionId], references: [id])
+  AppTransactionId    Int                 @unique @map("app_transaction_id")
+
+  checkedAt DateTime @map("checked_at")
+
+  closedAt        DateTime @map("closed_at")
+  reasonForClosed String   @map("reason_for_closed") @db.VarChar(256)
+
+  @@index([id])
+  @@map("wallet_input_transcations")
+}
+
+enum CcyEnum {
+  rod
+}
+
+enum TransactionTypeEnum {
+  REPLENISHMENT
+  WITHDRAWAL
+  GAME
 }

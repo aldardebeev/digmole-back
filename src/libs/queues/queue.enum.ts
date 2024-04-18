@@ -4,4 +4,5 @@ export enum EQueue {
   START_GAME_SESSION = 'start-game-session',
   NOTIFICATION = 'notification',
   CHECK_SIGNATURE = 'check-signature',
+  CHECK_INPUT_TRANSACTION = 'check-input-transaction',
 }

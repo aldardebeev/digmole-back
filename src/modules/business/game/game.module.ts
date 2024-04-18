@@ -1,11 +1,12 @@
-import { Module } from '@nestjs/common';
+import { Module, OnApplicationBootstrap } from '@nestjs/common';
 import { GameService } from './game.service';
 import { BullModule } from '@nestjs/bullmq';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { EQueue } from 'src/libs/queues/queue.enum';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { PrismaModule } from 'src/modules/infrastructure/prisma/prisma.module';
-import { StartGameWorker, ReplishmentWalletWorker } from './queue/game.worker';
+import { StartGameWorker, CheckSignatureWorker, ReplishmentWalletWorker } from './queue/game.worker';
+import { ReplishmentWalletService } from './replishment-wallet/replishment-wallet-service';
 
 @Module({
   imports: [
@@ -15,6 +16,12 @@ import { StartGameWorker, ReplishmentWalletWorker } from './queue/game.worker';
         BullBoardModule.forFeature({ name: queue, adapter: BullMQAdapter })
     ]),
   ],
-  providers: [GameService, StartGameWorker, ReplishmentWalletWorker],
+  providers: [GameService, ReplishmentWalletService, StartGameWorker, CheckSignatureWorker, ReplishmentWalletWorker],
 })
-export class GameModule { }
+export class GameModule implements OnApplicationBootstrap {
+  constructor(private readonly replishmentWalletService: ReplishmentWalletService) {}
+
+  async onApplicationBootstrap() {
+    await this.replishmentWalletService.initReplishmentCheckJob();
+  }
+}
