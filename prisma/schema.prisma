@@ -105,6 +105,14 @@ model WalletInputTranscation {
   @@map("wallet_input_transcations")
 }
 
+model BlockchainScan {
+  id               Int     @id @default(autoincrement()) @db.SmallInt
+  ccy              CcyEnum @map("rod")@unique
+  lastCheckedBlock Int     @map("last_checked_block")
+
+  @@map("blockchain_scan")
+}
+
 enum CcyEnum {
   rod
 }
