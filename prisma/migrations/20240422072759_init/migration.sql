@@ -19,7 +19,7 @@ CREATE TABLE "users" (
 CREATE TABLE "wallets" (
     "id" SMALLSERIAL NOT NULL,
     "user_id" INTEGER NOT NULL,
-    "address" VARCHAR(256) NOT NULL,
+    "address" TEXT NOT NULL,
     "signature_phrase" VARCHAR(256),
 
     CONSTRAINT "wallets_pkey" PRIMARY KEY ("id")
@@ -70,11 +70,23 @@ CREATE TABLE "wallet_input_transcations" (
     CONSTRAINT "wallet_input_transcations_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "blockchain_scan" (
+    "id" SMALLSERIAL NOT NULL,
+    "ccy" "CcyEnum" NOT NULL,
+    "last_checked_block" INTEGER NOT NULL,
+
+    CONSTRAINT "blockchain_scan_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE INDEX "users_id_idx" ON "users"("id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "wallets_user_id_key" ON "wallets"("user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "wallets_address_key" ON "wallets"("address");
 
 -- CreateIndex
 CREATE INDEX "wallets_id_idx" ON "wallets"("id");
@@ -86,10 +98,16 @@ CREATE INDEX "wallet_balances_id_idx" ON "wallet_balances"("id");
 CREATE INDEX "wallet_app_transcations_id_idx" ON "wallet_app_transcations"("id");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "wallet_input_transcations_fromAddress_key" ON "wallet_input_transcations"("fromAddress");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "wallet_input_transcations_app_transaction_id_key" ON "wallet_input_transcations"("app_transaction_id");
 
 -- CreateIndex
 CREATE INDEX "wallet_input_transcations_id_idx" ON "wallet_input_transcations"("id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "blockchain_scan_ccy_key" ON "blockchain_scan"("ccy");
 
 -- AddForeignKey
 ALTER TABLE "wallets" ADD CONSTRAINT "wallets_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

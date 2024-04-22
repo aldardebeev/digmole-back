@@ -30,12 +30,12 @@ model Wallet {
   user   User @relation(fields: [userId], references: [id])
   userId Int  @unique @map("user_id")
 
-  address String @db.VarChar(256)
+  address String @unique @map("address")
 
   signaturePhrase String? @map("signature_phrase") @db.VarChar(256)
 
   WalletInputTrancation WalletInputTranscation[]
-  WalletAppTrancation   WalletAppTrancation[]
+  WalletAppTrancation   WalletAppTrancation[] 
   WalletBalance         WalletBalance[]
 
   @@index([id])
@@ -49,10 +49,10 @@ model WalletBalance {
   walletId Int    @map("wallet_id")
 
   ccy                CcyEnum @map("ccy")
-  amountApp          Float   @map("amount_app")
-  amountAppDeposited Float   @map("amount_app_deposited")
-  amountLocked       Float   @map("amount_locked")
+  amountApp          Float   @map("amount_app")@default(0)
+  amountExternal    Float   @map("amount_external")@default(0)
 
+  @@unique([walletId, ccy])
   @@index([id])
   @@map("wallet_balances")
 }
@@ -87,19 +87,18 @@ model WalletInputTranscation {
 
   ccy         CcyEnum
   amount      Float
-  fromAddress String  @db.VarChar(256)
-  tx          String  @db.VarChar(256)
+  tx          String @unique @map("tx")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  WalletAppTrancation WalletAppTrancation @relation(fields: [AppTransactionId], references: [id])
-  AppTransactionId    Int                 @unique @map("app_transaction_id")
+  WalletAppTrancation WalletAppTrancation? @relation(fields: [AppTransactionId], references: [id])
+  AppTransactionId    Int?                 @unique @map("app_transaction_id")
 
-  checkedAt DateTime @map("checked_at")
+  checkedAt DateTime? @map("checked_at")
 
-  closedAt        DateTime @map("closed_at")
-  reasonForClosed String   @map("reason_for_closed") @db.VarChar(256)
+  closedAt        DateTime? @map("closed_at")
+  reasonForClosed String?   @map("reason_for_closed") @db.VarChar(256)
 
   @@index([id])
   @@map("wallet_input_transcations")
@@ -107,7 +106,7 @@ model WalletInputTranscation {
 
 model BlockchainScan {
   id               Int     @id @default(autoincrement()) @db.SmallInt
-  ccy              CcyEnum @map("rod")@unique
+  ccy              CcyEnum @unique @map("ccy")
   lastCheckedBlock Int     @map("last_checked_block")
 
   @@map("blockchain_scan")

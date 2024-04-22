@@ -2,7 +2,7 @@ import { GameModule } from './game.module'
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { Address, PublicKey, SecretKey, Transaction, textEncode, base64Decode, hexEncode, base64Encode } from '@umi-top/umi-core-js'
-import gameQueue from "../game/queue/send.job.connection";
+import gameQueue from "../queue/send.job.connection";
 import { randomUUID } from "crypto"
 import { EQueue } from "../../../libs/queues/queue.enum"
 
@@ -63,6 +63,7 @@ export class GameService {
     private isValidAdress(address: string) {
         try {
             Address.fromBech32(address)
+            console.log( Address.fromBech32(address))
             return true
         } catch (error) {
             return false
