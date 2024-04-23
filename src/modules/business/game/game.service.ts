@@ -5,6 +5,7 @@ import { Address, PublicKey, SecretKey, Transaction, textEncode, base64Decode, h
 import gameQueue from "../queue/send.job.connection";
 import { randomUUID } from "crypto"
 import { EQueue } from "../../../libs/queues/queue.enum"
+import { CcyEnum } from '@prisma/client';
 
 @Injectable()
 export class GameService {
@@ -24,6 +25,7 @@ export class GameService {
                 return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), { chatId: chatId.toString(), messageType: "invalidAddress" });
             }
             const randomMessage = this.generateRandomMessage()
+
             const user = await this.prismaService.user.create({
                 data: {
                     chatId: chatId.toString(),
@@ -31,12 +33,22 @@ export class GameService {
                     Wallet: {
                         create: {
                             address: address,
-                            signaturePhrase: randomMessage
-                        }
+                            signaturePhrase: randomMessage,
+                            WalletBalance: {
+                                create: {
+                                    ccy: CcyEnum.rod
+                                }
+                            }
+                        },
+                        
                     }
                 },
                 include: {
-                    Wallet: true,
+                    Wallet: {
+                        include: {
+                            WalletBalance: true
+                        }
+                    }
                 },
             });
             console.log("create")
@@ -86,6 +98,7 @@ export class GameService {
             }
         });
        
+
         const pubKey = Address.fromBech32(user.Wallet.address).getPublicKey()
         
         try{

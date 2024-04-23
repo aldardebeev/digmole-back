@@ -5,4 +5,6 @@ export enum EQueue {
   NOTIFICATION = 'notification',
   CHECK_SIGNATURE = 'check-signature',
   CHECK_INPUT_TRANSACTION = 'check-input-transaction',
+  EXISTS_WALLET = 'exists-wallet',
+  BALANCE = 'balance',
 }

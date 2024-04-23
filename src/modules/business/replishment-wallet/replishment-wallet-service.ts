@@ -22,17 +22,17 @@ export class ReplishmentWalletService {
 
     async checkReplishmentTransaction(): Promise<void> {
         const address = 'rod1d5we29rhpwmy5anrua3sdr78e7zhr38qav7yty7fjn3709j4kzvqt975em';
-        const url = `https://mainnet.umi.top/api/addresses/${address}/transactions?limit=10&offset=-10`;
+        const url = `https://mainnet.umi.top/api/addresses/${address}/transactions?limit=100&offset=-10`;
 
         try {
             const response = await axios.get(url);
             if (response.data && response.data.data && response.data.data.items) {
                 for (const item of response.data.data.items) {
-                    console.log("WalletExists   ", !await this.WalletExists(item.senderAddress))
+                    // console.log("WalletExists   ", !await this.WalletExists(item.senderAddress))
                     if (!await this.WalletExists(item.senderAddress)) {
                         continue;
                     }
-                    console.log("txExists   ",await this.txExists(item))
+                    // console.log("txExists   ",await this.txExists(item))
                     if (await this.txExists(item)) {   
                         continue;
                     }

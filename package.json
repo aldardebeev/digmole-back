@@ -7,6 +7,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "postinstall": "npx patch-package",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -33,6 +34,8 @@
     "axios": "^1.6.8",
     "bip39": "^3.1.0",
     "bullmq": "^5.7.1",
+    "patch-package": "^8.0.0",
+    "postinstall-postinstall": "^2.1.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1"
   },

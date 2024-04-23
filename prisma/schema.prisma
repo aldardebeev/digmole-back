@@ -15,7 +15,7 @@ datasource db {
 
 model User {
   id        Int      @id @default(autoincrement()) @db.SmallInt
-  chatId    String   @map("chat_id") @db.VarChar(256)
+  chatId    String   @unique @map("chat_id")
   username  String   @map("username") @db.VarChar(256)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -35,8 +35,8 @@ model Wallet {
   signaturePhrase String? @map("signature_phrase") @db.VarChar(256)
 
   WalletInputTrancation WalletInputTranscation[]
-  WalletAppTrancation   WalletAppTrancation[] 
-  WalletBalance         WalletBalance[]
+  WalletAppTrancation   WalletAppTrancation[]
+  WalletBalance         WalletBalance?
 
   @@index([id])
   @@map("wallets")
@@ -46,11 +46,11 @@ model WalletBalance {
   id Int @id @default(autoincrement()) @db.SmallInt
 
   Wallet   Wallet @relation(fields: [walletId], references: [id])
-  walletId Int    @map("wallet_id")
+  walletId Int     @unique @map("wallet_id")
 
-  ccy                CcyEnum @map("ccy")
-  amountApp          Float   @map("amount_app")@default(0)
-  amountExternal    Float   @map("amount_external")@default(0)
+  ccy            CcyEnum @map("ccy")
+  amountApp      Float   @default(0) @map("amount_app")
+  amountExternal Float   @default(0) @map("amount_external")
 
   @@unique([walletId, ccy])
   @@index([id])
@@ -85,9 +85,9 @@ model WalletInputTranscation {
   Wallet   Wallet @relation(fields: [walletId], references: [id])
   walletId Int    @map("wallet_id")
 
-  ccy         CcyEnum
-  amount      Float
-  tx          String @unique @map("tx")
+  ccy    CcyEnum
+  amount Float
+  tx     String  @unique @map("tx")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
