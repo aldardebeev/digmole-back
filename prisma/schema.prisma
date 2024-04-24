@@ -35,6 +35,7 @@ model Wallet {
   signaturePhrase String? @map("signature_phrase") @db.VarChar(256)
 
   WalletInputTrancation WalletInputTranscation[]
+  WalletWithdrawalTrancation WalletWithdrawalTranscation[]
   WalletAppTrancation   WalletAppTrancation[]
   WalletBalance         WalletBalance?
 
@@ -74,6 +75,8 @@ model WalletAppTrancation {
   parentWalletAppTransactionId DateTime @default(now()) @map("undepositparent_wallet_app_transaction_ided_at")
 
   WalletInputTrancation WalletInputTranscation?
+  WalletWithdrawalTranscation WalletWithdrawalTranscation?
+  
 
   @@index([id])
   @@map("wallet_app_transcations")
@@ -104,13 +107,32 @@ model WalletInputTranscation {
   @@map("wallet_input_transcations")
 }
 
-model BlockchainScan {
-  id               Int     @id @default(autoincrement()) @db.SmallInt
-  ccy              CcyEnum @unique @map("ccy")
-  lastCheckedBlock Int     @map("last_checked_block")
+model WalletWithdrawalTranscation {
+  id Int @id @default(autoincrement()) @db.SmallInt
 
-  @@map("blockchain_scan")
+  Wallet   Wallet @relation(fields: [walletId], references: [id])
+  walletId Int    @map("wallet_id")
+
+  addressTo String @map("address_to")
+  ccy    CcyEnum
+  amount Float
+  tx     String  @unique @map("tx")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  WalletAppTrancation WalletAppTrancation? @relation(fields: [AppTransactionId], references: [id])
+  AppTransactionId    Int?                 @unique @map("app_transaction_id")
+
+  checkedAt DateTime? @map("checked_at")
+
+  closedAt        DateTime? @map("closed_at")
+  reasonForClosed String?   @map("reason_for_closed") @db.VarChar(256)
+
+  @@index([id])
+  @@map("wallet_withdrawal_transcations")
 }
+
 
 enum CcyEnum {
   rod

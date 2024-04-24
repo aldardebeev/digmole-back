@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
+import { Address, SecretKey, Transaction, base64Encode, hexEncode } from '@umi-top/umi-core-js';
+import { mnemonicToSeedSync } from 'bip39';
+import { getTx } from './test';
 import gameQueue from "../queue/send.job.connection";
 import { EQueue } from 'src/libs/queues/queue.enum';
 import { randomUUID } from 'crypto';
-import { Address, SecretKey, Transaction, base64Encode, hexEncode } from '@umi-top/umi-core-js';
-import { generateMnemonic, mnemonicToSeedSync } from 'bip39';
-import { getTx } from './test';
+
 @Injectable()
 export class WithdrawalService {
     constructor(
@@ -13,10 +14,17 @@ export class WithdrawalService {
     ) { }
 
     async withdrawal(chatId: string, amount: number) {
-
-        const tx = await this.createTransaction(chatId, amount);
-
-        console.log(tx);
+        const currentAmount = amount * 100;
+        
+        if(await this.checkAvailableAmountWithdrawal(chatId) < currentAmount){
+            return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+                chatId: chatId.toString(),
+                messageType: "notEnoughTokens",
+                amount: await this.checkAvailableAmountWithdrawal(chatId) / 100
+            }));
+        }
+    
+        const tx = await this.createTransaction(chatId, currentAmount);
 
         fetch('https://mainnet.umi.top/api/mempool', {
             method: 'POST',
@@ -25,16 +33,13 @@ export class WithdrawalService {
             },
             body: JSON.stringify({
                 data: tx
-/*                 jsonrpc: '2.0',
-                id: '',
-                method: 'sendTransaction',
-                params: {
-                    base64: 
-                } */
             })
         }).then(function (response) {
             console.log(response.status, response.statusText)
-            return response.json()
+            return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+                chatId: chatId.toString(),
+                messageType: "withdrawal",
+            });
         }).then(function (json) {
             console.log('parsed json', json)
         }).catch(function (ex) {
@@ -44,8 +49,6 @@ export class WithdrawalService {
 
     async createTransaction(chatId: string, amount: number) {
         try {
-            const currentAmount = amount * 100;
-
             const mnemonic = `champion hybrid fat claim chicken nerve about visa limb oak great simple mirror often tomorrow program panther stamp garlic prosper couple buddy local deputy`;
             const seed = mnemonicToSeedSync(mnemonic)
 
@@ -53,7 +56,7 @@ export class WithdrawalService {
             const sender = Address.fromKey(secKey).setPrefix('rod')
             const recipientAddress = await this.getSenderAddress(chatId);
 
-           const tx = getTx(mnemonic, sender.getBech32(), recipientAddress, 1, 8 )
+            const tx = getTx(mnemonic, sender.getBech32(), recipientAddress, amount, 8)
             return tx;
         } catch (e: unknown) {
             console.log(e);
@@ -72,13 +75,21 @@ export class WithdrawalService {
         return user.Wallet.address
     }
 
-}
+    async checkAvailableAmountWithdrawal(chatId: string) {
+        const user = await this.prismaService.user.findFirst({
+            where: {
+                chatId: chatId.toString()
+            },
+            include: {
+                Wallet: {
+                    include: {
+                        WalletBalance: true,
+                    }
+                }
+            }
+        })
+       return user.Wallet.WalletBalance.amountApp;
+    }
 
-function Bip39SeedGenerator() {
-    throw new Error('Function not implemented.');
-}
-
-function getSeed($mnemonic: any) {
-    throw new Error('Function not implemented.');
 }
 

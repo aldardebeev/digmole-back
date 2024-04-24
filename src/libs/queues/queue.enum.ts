@@ -7,4 +7,6 @@ export enum EQueue {
   CHECK_INPUT_TRANSACTION = 'check-input-transaction',
   EXISTS_WALLET = 'exists-wallet',
   BALANCE = 'balance',
+  AVAILABLE_AMOUNT = 'available-amount',
+  START_GAME = 'start-game',
 }

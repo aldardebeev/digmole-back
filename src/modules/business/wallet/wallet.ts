@@ -11,11 +11,19 @@ export class WalletService {
     ) { }
 
     async checkExistWallet(chatId: string) {
-        console.log('checkExistWallet', await this.existWallet(chatId));
         return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
             chatId: chatId.toString(),
             messageType: "checkLinkWallet",
-            isLink: await this.existWallet(chatId)
+            isLink: await this.existWallet(chatId),
+        });
+    }
+
+    async checkAvailableAmount(chatId: string) {
+        return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+            chatId: chatId.toString(),
+            messageType: "checkAvailableAmount",
+            isLink: await this.existWallet(chatId),
+            availableAmount: await this.getBalance(chatId) >= 0.01 ? true : false,
         });
     }
 
@@ -28,12 +36,23 @@ export class WalletService {
                 Wallet: true
             }
         });
-        console.log(user)
-
-        return user.Wallet ? true : false;
+        
+        if (user) {
+             return user.Wallet ? true : false;
+        }else{
+            return false;
+        }
     }
 
     async balance(chatId: string) {
+        return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+            chatId: chatId.toString(),
+            messageType: "balance",
+            amount: await this.getBalance(chatId),
+        });
+    }
+
+    async getBalance(chatId: string) {
         const user = await this.prismaService.user.findFirst({
             where: {
                 chatId: chatId.toString()
@@ -51,11 +70,7 @@ export class WalletService {
 
             }
         });
-        return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
-            chatId: chatId.toString(),
-            messageType: "balance",
-            amount: user.Wallet.WalletBalance.amountApp / 100
-        });
+        return user.Wallet.WalletBalance.amountApp / 100
     }
 }
 
