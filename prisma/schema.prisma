@@ -37,6 +37,7 @@ model Wallet {
   WalletInputTrancation WalletInputTranscation[]
   WalletWithdrawalTrancation WalletWithdrawalTranscation[]
   WalletAppTrancation   WalletAppTrancation[]
+  WalletGameTransation   WalletGameTransation[]
   WalletBalance         WalletBalance?
 
   @@index([id])
@@ -131,6 +132,39 @@ model WalletWithdrawalTranscation {
 
   @@index([id])
   @@map("wallet_withdrawal_transcations")
+}
+
+model WalletGameTransation {
+  id Int @id @default(autoincrement()) @db.SmallInt
+
+  Wallet   Wallet @relation(fields: [walletId], references: [id])
+  walletId Int    @map("wallet_id")
+
+  ccy         CcyEnum             @map("ccy")
+  amount      Float               @map("amount")
+  tx          String              @map("tx")
+  isWinner    Boolean             @map("is_winner")@default(false)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  WalletGameSessionTrancation  WalletGameSessionTransation[]
+  @@index([id])
+  @@map("wallet_game_transcations")
+}
+
+model WalletGameSessionTransation {
+  id Int @id @default(autoincrement()) @db.SmallInt
+
+  WalletGameTransation   WalletGameTransation @relation(fields: [WalletGameTransationId], references: [id])
+  WalletGameTransationId Int    @map("wallet_game_transation_id")
+
+  ccy         CcyEnum             @map("ccy")
+  amount      Float               @map("amount")
+  tx          String              @map("tx")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([id])
+  @@map("wallet_game_session_transcations")
 }
 
 

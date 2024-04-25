@@ -2,10 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { Address, SecretKey, Transaction, base64Encode, hexEncode } from '@umi-top/umi-core-js';
 import { mnemonicToSeedSync } from 'bip39';
-import { getTx } from './test';
+import { getTx, getTxNotMnemonic } from './test';
 import gameQueue from "../queue/send.job.connection";
 import { EQueue } from 'src/libs/queues/queue.enum';
 import { randomUUID } from 'crypto';
+import { CcyEnum } from '@prisma/client';
 
 @Injectable()
 export class WithdrawalService {
@@ -15,7 +16,7 @@ export class WithdrawalService {
 
     async withdrawal(chatId: string, amount: number) {
         const currentAmount = amount * 100;
-        
+
         if(await this.checkAvailableAmountWithdrawal(chatId) < currentAmount){
             return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
                 chatId: chatId.toString(),
@@ -34,16 +35,56 @@ export class WithdrawalService {
             body: JSON.stringify({
                 data: tx
             })
-        }).then(function (response) {
-            console.log(response.status, response.statusText)
+        }).then(async (response) =>{
+            console.log(response.status, response.statusText);
+
             return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
                 chatId: chatId.toString(),
                 messageType: "withdrawal",
+                amount: amount,
+                balance: await this.saveTransaction(chatId, tx, currentAmount)
             });
+
         }).then(function (json) {
             console.log('parsed json', json)
         }).catch(function (ex) {
             console.log('parsing failed', ex)
+        })
+    }
+
+    async saveTransaction(chatId: string, tx: string, amount: number) {
+        const wallet = await this.getRecipientWallet(chatId);
+
+        return await this.prismaService.$transaction(async () => {
+            const walletWithdrawalTranscation = await this.prismaService.walletWithdrawalTranscation.create({
+                data: {
+                    walletId: wallet.id,
+                    addressTo: wallet.address,
+                    ccy: CcyEnum.rod,
+                    amount: amount,
+                    tx: tx,
+                }
+            })
+            if (!walletWithdrawalTranscation) {
+                throw new Error(`${tx} - no record was created`)
+            }
+
+            const walletBalance = await this.prismaService.walletBalance.update({
+                where: {
+                    walletId_ccy: {
+                        walletId: wallet.id,
+                        ccy: CcyEnum.rod
+                    }
+                },
+                data: {
+                    amountApp: {
+                        decrement: amount,
+                    },
+                }
+             
+            })
+
+            return walletBalance.amountApp / 100
         })
     }
 
@@ -54,16 +95,16 @@ export class WithdrawalService {
 
             const secKey = SecretKey.fromSeed(seed)
             const sender = Address.fromKey(secKey).setPrefix('rod')
-            const recipientAddress = await this.getSenderAddress(chatId);
+            const recipientAddress = await this.getRecipientWallet(chatId);
 
-            const tx = getTx(mnemonic, sender.getBech32(), recipientAddress, amount, 8)
+            const tx = getTxNotMnemonic(secKey, sender.getBech32(), recipientAddress.address, amount, 8)
             return tx;
         } catch (e: unknown) {
             console.log(e);
         }
     }
 
-    async getSenderAddress(chatId: string) {
+    async getRecipientWallet(chatId: string) {
         const user = await this.prismaService.user.findFirst({
             where: {
                 chatId: chatId.toString()
@@ -72,7 +113,7 @@ export class WithdrawalService {
                 Wallet: true
             }
         })
-        return user.Wallet.address
+        return user.Wallet
     }
 
     async checkAvailableAmountWithdrawal(chatId: string) {
@@ -90,6 +131,8 @@ export class WithdrawalService {
         })
        return user.Wallet.WalletBalance.amountApp;
     }
+
+  
 
 }
 

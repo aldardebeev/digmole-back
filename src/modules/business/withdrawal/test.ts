@@ -252,4 +252,22 @@ export function getTx(mnemonic,
     arraySet(txBytes, signs, 86)
     return Buffer.from(txBytes).toString('base64') // NASH RESULT
 }
-
+export function getTxNotMnemonic(secKey,
+    sender,
+    recipient,
+    amount,
+    version = 8,
+    timestamp = new Date().getTime() / 1000) {
+const bytes = arrayNew(86)
+bytes[0] = version // version transaction
+arraySet(bytes, umi.Address.fromBech32(sender).getBytes(), 1, 34)
+arraySet(bytes, recipient ? umi.Address.fromBech32(recipient).getBytes() : arrayNew(34), 35)
+arraySet(bytes, uint64ToBytes(amount), 69) // amount
+arraySet(bytes, uint32(Math.floor(timestamp)), 77) // timestamp
+arraySet(bytes, uint32(getRandomInt(9999)), 81) // nonce
+const signs = secKey.sign(bytes) // sign
+const txBytes = arrayNew(150)
+arraySet(txBytes, bytes)
+arraySet(txBytes, signs, 86)
+return Buffer.from(txBytes).toString('base64') // NASH RESULT
+}
