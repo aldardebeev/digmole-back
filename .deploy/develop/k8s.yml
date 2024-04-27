@@ -147,7 +147,6 @@ spec:
         - name: config
           configMap:
             name: redis-config
-        - cache: /data
       enableServiceLinks: false
   volumeClaimTemplates:
     - metadata:
