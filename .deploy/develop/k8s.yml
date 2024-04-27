@@ -124,6 +124,9 @@ spec:
       containers:
       - name: $CI_PROJECT_NAME-redis
         image: redis:7.2.4-alpine
+        restart: always
+        command: ["redis-server --save 20 1 --loglevel warning --requirepass eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81"]
+        #args: ["redis.conf"]
         resources:
           requests:
             memory: "64M"
@@ -145,6 +148,7 @@ spec:
         - name: config
           configMap:
             name: redis-config
+        - cache: /data
       enableServiceLinks: false
   volumeClaimTemplates:
     - metadata:
