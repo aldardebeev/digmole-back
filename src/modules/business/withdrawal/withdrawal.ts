@@ -7,6 +7,7 @@ import gameQueue from "../queue/send.job.connection";
 import { EQueue } from 'src/libs/queues/queue.enum';
 import { randomUUID } from 'crypto';
 import { CcyEnum } from '@prisma/client';
+import { config } from 'src/configs/config';
 
 @Injectable()
 export class WithdrawalService {
@@ -90,8 +91,7 @@ export class WithdrawalService {
 
     async createTransaction(chatId: string, amount: number) {
         try {
-            const mnemonic = `champion hybrid fat claim chicken nerve about visa limb oak great simple mirror often tomorrow program panther stamp garlic prosper couple buddy local deputy`;
-            const seed = mnemonicToSeedSync(mnemonic)
+            const seed = mnemonicToSeedSync(config.MNEMONIC)
 
             const secKey = SecretKey.fromSeed(seed)
             const sender = Address.fromKey(secKey).setPrefix('rod')

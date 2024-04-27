@@ -9,46 +9,83 @@ import { getTxNotMnemonic } from '../withdrawal/test';
 import { retry } from 'radash'
 import { cards } from 'src/libs/cards/cards.enum';
 import { EWinner } from 'src/libs/cards/winner.enum';
-import { User } from '@prisma/client';
 import { ECcy } from 'src/libs/ccy/ccy.enum';
+import { config } from 'src/configs/config';
+import axios from 'axios';
 
 @Injectable()
 export class GameService {
     private readonly logger = new Logger(GameService.name);
     private GAME_TRANSACTION = '';
-    private readonly GAME_SESSION_TRANSACTION = [];
+    private GAME_SESSION_TRANSACTION = [];
+    private BOT_CARD_VALUE = 0;
+    private USER_CARD_VALUE = 0
     constructor(private readonly prismaService: PrismaService) { }
 
     async startGame(chatId: string, amount: number) {
-        const user = await this.getUser(chatId)
+        // const user = await this.getUser(chatId)
+      
+        // if (user.Wallet.WalletBalance.amountApp / 100 < amount) {
+        //     return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+        //         chatId: chatId.toString(),
+        //         messageType: "notEnoughTokens",
+        //         amount: user.Wallet.WalletBalance.amountApp / 100
+        //     }));
+        // }
 
-        if (user.Wallet.WalletBalance.amountApp < amount) {
-            return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
-                chatId: chatId.toString(),
-                messageType: "notEnoughTokens",
-                amount: user.Wallet.WalletBalance.amountApp / 100
-            }));
-        }
+        const shouldBotWin = await this.shouldBotWin();
+        
+        // const secKey = await this.sendToGameAddress();
+        // const cardList = await this.sendToHotAddress(secKey, shouldBotWin);
+        // const winner = await this.determineWinner(cardList);
+        
+        // this.saveTransactions(user, amount * 100, winner);
+        // this.awardPrize(user, amount * 100 , winner);
 
-        const secKey = await this.sendToGameAddress();
-        const cardList = await this.sendToHotAddress(secKey);
-        const winner = await this.determineWinner(cardList);
-
-        this.saveTransactions(user, amount * 100, winner);
-
-        return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
-            chatId: chatId.toString(),
-            messageType: "gameResult",
-            botCard1: cardList[0],
-            botCard2: cardList[1],
-            userCard1: cardList[2],
-            userCard2: cardList[3],
-            winner: winner
-        });
+        // return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+        //     chatId: chatId.toString(),
+        //     messageType: "gameResult",
+        //     botCard1: cardList[0],
+        //     botCard2: cardList[1],
+        //     userCard1: cardList[2],
+        //     userCard2: cardList[3],
+        //     botCardValue: this.BOT_CARD_VALUE,
+        //     userCardValue: this.USER_CARD_VALUE,
+        //     winner: winner
+        // });
     }
 
+    awardPrize(user, amount: number, winner: EWinner) { 
+        this.prismaService.$transaction(async () => {
+            const transactions = await this.prismaService.walletAppTrancation.create({
+                data: {
+                    walletId: user.Wallet.id,
+                    ccy: ECcy.ROD,
+                    amount: amount,
+                },
+              
+            })
+
+            amount = winner === EWinner.USER ? amount : winner === EWinner.BOT ? amount * -1 : 0;
+            const balance = await this.prismaService.walletBalance.update({
+                where: {
+                    walletId_ccy: {
+                        walletId: user.Wallet.id,
+                        ccy: ECcy.ROD
+                    }
+                },
+                data: {
+                    amountApp: {
+                        increment: amount,
+                    },
+                }
+
+            })
+        })
+    } 
+
     saveTransactions(user, amount: number, winner: EWinner) {
-         this.prismaService.$transaction(async () => {
+        this.prismaService.$transaction(async () => {
             const sessionTransactions = this.GAME_SESSION_TRANSACTION.map(tx => {
                 return {
                     ccy: ECcy.ROD,
@@ -56,7 +93,6 @@ export class GameService {
                     tx: tx
                 };
             });
-            console.log("user ---  ", user, "sessionTransactions", sessionTransactions, "walletID --- ", user.Wallet.id)
             const transactions = await this.prismaService.walletGameTransation.create({
                 data: {
                     walletId: user.Wallet.id,
@@ -74,30 +110,15 @@ export class GameService {
                     WalletGameSessionTrancation: true
                 }
             })
-             const balance =await this.prismaService.walletBalance.update({
-                where: {
-                    walletId_ccy: {
-                        walletId: user.Wallet.id,
-                        ccy: ECcy.ROD
-                    }
-                },
-                data: {
-                    amountApp: {
-                        decrement: amount,
-                    },
-                }
 
-            })
-            console.log("balance --- ", balance, "transactions --- ", transactions)
         })
     }
 
     async getCardValue(cards: string[]) {
         const cardValues = {
-            '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
-            'jack': 11, 'queen': 12, 'king': 13, 'ace': 14
+            '6': 6, '7': 7, '8': 8, '9': 9, '0': 10,
+            'J': 2, 'Q': 3, 'K': 4, 'A': 11
         };
-
         let totalValue = 0;
 
         for (const card of cards) {
@@ -109,33 +130,44 @@ export class GameService {
     }
 
     async determineWinner(cardList: string[]) {
-        const botCardValue = await this.getCardValue([cardList[0], cardList[1]]);
-        const userCardValue = await this.getCardValue([cardList[2], cardList[3]]);
+        this.BOT_CARD_VALUE = await this.getCardValue([cardList[0], cardList[1]]);
+        this.USER_CARD_VALUE = await this.getCardValue([cardList[2], cardList[3]]);
 
-        if (botCardValue === userCardValue) {
+        if (this.BOT_CARD_VALUE === this.USER_CARD_VALUE) {
             return EWinner.DRAW;
-        } else if (botCardValue > userCardValue) {
+        } else if (this.BOT_CARD_VALUE > this.USER_CARD_VALUE) {
             return EWinner.BOT;
         } else {
             return EWinner.USER;
         }
     }
 
-    async sendToHotAddress(secKeyGame: SecretKey) {
-        const sender = Address.fromKey(secKeyGame).setPrefix('rod').getBech32()
-
+    async sendToHotAddress(secKeyGame: SecretKey, shouldBotWin: boolean) {
+        const sender = Address.fromKey(secKeyGame).setPrefix('rod').getBech32();
         const secKeyHotWallet = await this.getHotWalletSecKey();
-        const recipient = Address.fromKey(secKeyHotWallet).setPrefix('rod').getBech32()
+        const recipient = Address.fromKey(secKeyHotWallet).setPrefix('rod').getBech32();
+        let determineWinner: EWinner;
+        let txCardList: any[];
 
-        let count = 0
+        if (shouldBotWin) {
+            let winner: EWinner;
+            do {
+                const cardList = await this.getCardList(secKeyGame, sender, recipient);
+                winner = await this.determineWinner(cardList.map(tx => tx.card));
+                txCardList = cardList
+            } while (winner !== EWinner.BOT);
+            determineWinner = winner;
+        } else {
+            const cardList = await this.getCardList(secKeyGame, sender, recipient);
+            txCardList = cardList
+            determineWinner = await this.determineWinner(cardList.map(tx => tx.card));
+        }
 
-        const cardList = []
-        while (count < 4) {
-            const tx = getTxNotMnemonic(secKeyGame, sender, recipient, 1, 8);
-
+        for (const tx of txCardList.map(tx => tx.tx)) {
             try {
                 let result: { error: { code: number; }; };
                 do {
+                    console.log
                     result = await retry(
                         { times: 10, delay: 2000 }, async () => {
                             const response = await this.sendTransactionMempool(tx);
@@ -149,16 +181,31 @@ export class GameService {
                     }
                 } while (result.error && result.error.code === 400);
 
-                console.log("result : ", result)
-                const buffer = Buffer.from(tx, 'base64');
-                const transaction = Transaction.fromBytes(buffer);
-                const hash = hexEncode(transaction.getHash());
 
-                this.GAME_SESSION_TRANSACTION.push(hash);
-                cardList.push(await this.getCard(hash));
             } catch (error) {
                 console.log("sendToGameAddress - error: ", error)
             }
+        }
+
+        return txCardList.map(tx => tx.card)
+    }
+
+    async getCardList(secKeyGame: SecretKey, sender: string, recipient: string) {
+        let count = 0
+        const cardList = []
+
+        while (count < 4) {
+            const tx = getTxNotMnemonic(secKeyGame, sender, recipient, 1, 8);
+
+            const buffer = Buffer.from(tx, 'base64');
+            const transaction = Transaction.fromBytes(buffer);
+            const hash = hexEncode(transaction.getHash());
+
+            this.GAME_SESSION_TRANSACTION.push(hash);
+            cardList.push({
+                tx: tx,
+                card: await this.getCard(hash)
+            });
 
             count += 1
         }
@@ -168,10 +215,9 @@ export class GameService {
 
     async getCard(tx: string) {
         const seedSum = await this.getSumFromSeed(tx);
-        const cardIndex = seedSum % 52;
+        const cardIndex = seedSum % 36;
         const card = cards[cardIndex];
         return card;
-        // console.log(card, hexEncode(transaction.getHash()))
     }
     async getSumFromSeed(seed: string): Promise<number> {
         let sum = 0;
@@ -219,7 +265,6 @@ export class GameService {
 
     async getGameWalletSecKey() {
         const mnemonic = generateMnemonic(256)
-        console.log(mnemonic)
         const seed = mnemonicToSeedSync(mnemonic)
         const secKey = SecretKey.fromSeed(seed)
 
@@ -227,8 +272,7 @@ export class GameService {
     }
 
     async getHotWalletSecKey() {
-        const mnemonic = `champion hybrid fat claim chicken nerve about visa limb oak great simple mirror often tomorrow program panther stamp garlic prosper couple buddy local deputy`;
-        const seed = mnemonicToSeedSync(mnemonic)
+        const seed = mnemonicToSeedSync(config.MNEMONIC)
         const secKey = SecretKey.fromSeed(seed)
 
         return secKey
@@ -259,6 +303,36 @@ export class GameService {
             }
         })
         return user
+    }
+
+    async shouldBotWin() {
+        const address =  Address.fromKey(await this.getHotWalletSecKey()).setPrefix('rod').getBech32();
+        const url = `https://mainnet.umi.top/api/addresses/${address}/account`;
+        const response = await axios.get(url);
+
+        if(response.data.data.confirmedBalance <= 3000){
+            return true;
+        }
+
+        const walletGameTransation = await this.prismaService.walletGameTransation.groupBy({
+            by: ['isWinner'],
+            _sum: {
+                amount: true,
+            },
+        });
+        console.log(walletGameTransation, 'walletGameTransation')
+       
+        const winnerTrue = walletGameTransation.find(entry => entry.isWinner === true);
+        const winnerFalse = walletGameTransation.find(entry => entry.isWinner === false);
+        const botWinnCoefficient = winnerFalse._sum.amount / winnerTrue._sum.amount
+
+        const count = await this.prismaService.walletGameTransation.count({});
+        console.log(botWinnCoefficient)
+        if (count < 10) {
+            return true
+        } else {
+            return botWinnCoefficient <= config.AVAILABLE_BOT_WINNER_COEFFICIENT ? true : false
+        }
     }
 
 }

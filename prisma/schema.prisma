@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
 }
 
 datasource db {
@@ -27,18 +27,18 @@ model User {
 
 model Wallet {
   id     Int  @id @default(autoincrement()) @db.SmallInt
-  user   User @relation(fields: [userId], references: [id])
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId Int  @unique @map("user_id")
 
   address String @unique @map("address")
 
   signaturePhrase String? @map("signature_phrase") @db.VarChar(256)
 
-  WalletInputTrancation WalletInputTranscation[]
+  WalletInputTrancation      WalletInputTranscation[]
   WalletWithdrawalTrancation WalletWithdrawalTranscation[]
-  WalletAppTrancation   WalletAppTrancation[]
-  WalletGameTransation   WalletGameTransation[]
-  WalletBalance         WalletBalance?
+  WalletAppTrancation        WalletAppTrancation[]
+  WalletGameTransation       WalletGameTransation[]
+  WalletBalance              WalletBalance?
 
   @@index([id])
   @@map("wallets")
@@ -47,8 +47,8 @@ model Wallet {
 model WalletBalance {
   id Int @id @default(autoincrement()) @db.SmallInt
 
-  Wallet   Wallet @relation(fields: [walletId], references: [id])
-  walletId Int     @unique @map("wallet_id")
+  Wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  walletId Int    @unique @map("wallet_id")
 
   ccy            CcyEnum @map("ccy")
   amountApp      Float   @default(0) @map("amount_app")
@@ -62,22 +62,13 @@ model WalletBalance {
 model WalletAppTrancation {
   id Int @id @default(autoincrement()) @db.SmallInt
 
-  Wallet   Wallet @relation(fields: [walletId], references: [id])
+  Wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   walletId Int    @map("wallet_id")
 
-  ccy         CcyEnum             @map("ccy")
-  type        TransactionTypeEnum @map("type")
-  amount      Float               @map("amount")
-  isDeposited Boolean             @map("is_deposited")
+  ccy    CcyEnum @map("ccy")
+  amount Float   @map("amount")
 
-  createdAt     DateTime @default(now()) @map("created_at")
-  undepositedAt DateTime @default(now()) @map("undeposited_at")
-
-  parentWalletAppTransactionId DateTime @default(now()) @map("undepositparent_wallet_app_transaction_ided_at")
-
-  WalletInputTrancation WalletInputTranscation?
-  WalletWithdrawalTranscation WalletWithdrawalTranscation?
-  
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([id])
   @@map("wallet_app_transcations")
@@ -86,7 +77,7 @@ model WalletAppTrancation {
 model WalletInputTranscation {
   id Int @id @default(autoincrement()) @db.SmallInt
 
-  Wallet   Wallet @relation(fields: [walletId], references: [id])
+  Wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   walletId Int    @map("wallet_id")
 
   ccy    CcyEnum
@@ -95,9 +86,6 @@ model WalletInputTranscation {
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
-  WalletAppTrancation WalletAppTrancation? @relation(fields: [AppTransactionId], references: [id])
-  AppTransactionId    Int?                 @unique @map("app_transaction_id")
 
   checkedAt DateTime? @map("checked_at")
 
@@ -111,19 +99,16 @@ model WalletInputTranscation {
 model WalletWithdrawalTranscation {
   id Int @id @default(autoincrement()) @db.SmallInt
 
-  Wallet   Wallet @relation(fields: [walletId], references: [id])
+  Wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   walletId Int    @map("wallet_id")
 
-  addressTo String @map("address_to")
-  ccy    CcyEnum
-  amount Float
-  tx     String  @unique @map("tx")
+  addressTo String  @map("address_to")
+  ccy       CcyEnum
+  amount    Float
+  tx        String  @unique @map("tx")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-
-  WalletAppTrancation WalletAppTrancation? @relation(fields: [AppTransactionId], references: [id])
-  AppTransactionId    Int?                 @unique @map("app_transaction_id")
 
   checkedAt DateTime? @map("checked_at")
 
@@ -137,16 +122,17 @@ model WalletWithdrawalTranscation {
 model WalletGameTransation {
   id Int @id @default(autoincrement()) @db.SmallInt
 
-  Wallet   Wallet @relation(fields: [walletId], references: [id])
+  Wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   walletId Int    @map("wallet_id")
 
-  ccy         CcyEnum             @map("ccy")
-  amount      Float               @map("amount")
-  tx          String              @map("tx")
-  isWinner    Boolean             @map("is_winner")@default(false)
-  createdAt     DateTime @default(now()) @map("created_at")
+  ccy       CcyEnum  @map("ccy")
+  amount    Float    @map("amount")
+  tx        String   @map("tx")
+  isWinner  Boolean  @default(false) @map("is_winner")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  WalletGameSessionTrancation  WalletGameSessionTransation[]
+  WalletGameSessionTrancation WalletGameSessionTransation[]
+
   @@index([id])
   @@map("wallet_game_transcations")
 }
@@ -154,19 +140,18 @@ model WalletGameTransation {
 model WalletGameSessionTransation {
   id Int @id @default(autoincrement()) @db.SmallInt
 
-  WalletGameTransation   WalletGameTransation @relation(fields: [WalletGameTransationId], references: [id])
-  WalletGameTransationId Int    @map("wallet_game_transation_id")
+  WalletGameTransation   WalletGameTransation @relation(fields: [WalletGameTransationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  WalletGameTransationId Int                  @map("wallet_game_transation_id")
 
-  ccy         CcyEnum             @map("ccy")
-  amount      Float               @map("amount")
-  tx          String              @map("tx")
+  ccy    CcyEnum @map("ccy")
+  amount Float   @map("amount")
+  tx     String  @map("tx")
 
-  createdAt     DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([id])
   @@map("wallet_game_session_transcations")
 }
-
 
 enum CcyEnum {
   rod

@@ -23,6 +23,7 @@ export class UserService {
                 console.log("addres invalid")
                 return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), { chatId: chatId.toString(), messageType: "invalidAddress" });
             }
+            
             const randomMessage = this.generateRandomMessage()
 
             const user = await this.prismaService.user.create({
@@ -109,6 +110,11 @@ export class UserService {
                 isValid: isValid
             }));
         }catch(error){
+            await this.prismaService.user.delete({
+                where: {
+                    chatId: chatId.toString(),
+                }
+            });
             return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
                 chatId: chatId.toString(),
                 messageType: "checkSignature",

@@ -22,7 +22,7 @@ export class ReplishmentWalletService {
 
     async checkReplishmentTransaction(): Promise<void> {
         const address = 'rod1d5we29rhpwmy5anrua3sdr78e7zhr38qav7yty7fjn3709j4kzvqt975em';
-        const url = `https://mainnet.umi.top/api/addresses/${address}/transactions?limit=100&offset=-10`;
+        const url = `https://mainnet.umi.top/api/addresses/${address}/transactions?limit=10000&offset=-10000`;
 
         try {
             const response = await axios.get(url);

@@ -19,11 +19,12 @@ export class WalletService {
     }
 
     async checkAvailableAmount(chatId: string) {
+        const isLink = await this.existWallet(chatId)
         return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
             chatId: chatId.toString(),
             messageType: "checkAvailableAmount",
-            isLink: await this.existWallet(chatId),
-            availableAmount: await this.getBalance(chatId) >= 0.01 ? true : false,
+            isLink: isLink,
+            availableAmount: isLink ? await this.getBalance(chatId) >= 1 ? true : false : 0,
         });
     }
 
