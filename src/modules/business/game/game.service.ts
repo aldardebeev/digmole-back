@@ -23,36 +23,36 @@ export class GameService {
     constructor(private readonly prismaService: PrismaService) { }
 
     async startGame(chatId: string, amount: number) {
-        // const user = await this.getUser(chatId)
+        const user = await this.getUser(chatId)
       
-        // if (user.Wallet.WalletBalance.amountApp / 100 < amount) {
-        //     return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
-        //         chatId: chatId.toString(),
-        //         messageType: "notEnoughTokens",
-        //         amount: user.Wallet.WalletBalance.amountApp / 100
-        //     }));
-        // }
+        if (user.Wallet.WalletBalance.amountApp / 100 < amount) {
+            return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+                chatId: chatId.toString(),
+                messageType: "notEnoughTokens",
+                amount: user.Wallet.WalletBalance.amountApp / 100
+            }));
+        }
 
         const shouldBotWin = await this.shouldBotWin();
         
-        // const secKey = await this.sendToGameAddress();
-        // const cardList = await this.sendToHotAddress(secKey, shouldBotWin);
-        // const winner = await this.determineWinner(cardList);
+        const secKey = await this.sendToGameAddress();
+        const cardList = await this.sendToHotAddress(secKey, shouldBotWin);
+        const winner = await this.determineWinner(cardList);
         
-        // this.saveTransactions(user, amount * 100, winner);
-        // this.awardPrize(user, amount * 100 , winner);
+        this.saveTransactions(user, amount * 100, winner);
+        this.awardPrize(user, amount * 100 , winner);
 
-        // return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
-        //     chatId: chatId.toString(),
-        //     messageType: "gameResult",
-        //     botCard1: cardList[0],
-        //     botCard2: cardList[1],
-        //     userCard1: cardList[2],
-        //     userCard2: cardList[3],
-        //     botCardValue: this.BOT_CARD_VALUE,
-        //     userCardValue: this.USER_CARD_VALUE,
-        //     winner: winner
-        // });
+        return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+            chatId: chatId.toString(),
+            messageType: "gameResult",
+            botCard1: cardList[0],
+            botCard2: cardList[1],
+            userCard1: cardList[2],
+            userCard2: cardList[3],
+            botCardValue: this.BOT_CARD_VALUE,
+            userCardValue: this.USER_CARD_VALUE,
+            winner: winner
+        });
     }
 
     awardPrize(user, amount: number, winner: EWinner) { 
@@ -310,7 +310,7 @@ export class GameService {
         const url = `https://mainnet.umi.top/api/addresses/${address}/account`;
         const response = await axios.get(url);
 
-        if(response.data.data.confirmedBalance <= 3000){
+        if(response.data.data.confirmedBalance <= 1000){
             return true;
         }
 
