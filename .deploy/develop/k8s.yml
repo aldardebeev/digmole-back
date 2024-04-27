@@ -77,10 +77,10 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: gcache-configmap
+  name: redis-config
   namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
 data:
-  keydb.conf: |
+  redis.conf: |
     daemonize no
     appendonly no
     tcp-backlog 5110
@@ -91,9 +91,9 @@ data:
 apiVersion: v1
 kind: Service
 metadata:
-  name: $CI_PROJECT_NAME-gcache-service
+  name: $CI_PROJECT_NAME-redis-service
   labels:
-    app: $CI_PROJECT_NAME-gcache
+    app: $CI_PROJECT_NAME-redis
   namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
 spec:
   type: NodePort
@@ -101,28 +101,29 @@ spec:
   - port: 6379
     targetPort: 6379
     protocol: TCP
+    name: $CI_PROJECT_NAME-redis-networking
   selector:
-    app: $CI_PROJECT_NAME-gcache
+    app: $CI_PROJECT_NAME-redis
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: $CI_PROJECT_NAME-gcache
+  name: $CI_PROJECT_NAME-redis
   namespace: $NAME_PROJECT-$CI_COMMIT_REF_NAME
 spec:
-  serviceName: $CI_PROJECT_NAME-gcache-service
+  serviceName: $CI_PROJECT_NAME-redis-service
   selector:
     matchLabels:
-      app: $CI_PROJECT_NAME-gcache
+      app: $CI_PROJECT_NAME-redis
   replicas: 1
   template:
     metadata:
       labels:
-        app: $CI_PROJECT_NAME-gcache
+        app: $CI_PROJECT_NAME-redis
     spec:
       containers:
-      - name: $CI_PROJECT_NAME-gcache
-        image: eqalpha/keydb:alpine_x86_64_v6.2.0
+      - name: $CI_PROJECT_NAME-redis
+        image: redis:7.2.4-alpine
         resources:
           requests:
             memory: "64M"
@@ -132,15 +133,28 @@ spec:
             cpu: "1"
         ports:
         - containerPort: 6379
+          name: redis
         volumeMounts:
-        - name: config
-          mountPath: /etc/keydb/keydb.conf
-          subPath: keydb.conf
+        - name: data
+          mountPath: /data
+        - name: redis-config
+          mountPath: /etc/redis/
       volumes:
-      - name: config
-        configMap:
-          name: gcache-configmap
+        - name: redis-config
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: redis-config
       enableServiceLinks: false
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: "managed-nfs-storage"
+        resources:
+          requests:
+            storage: 50Mi
 ### end redis block ###
 ---
 ##### start backend block #######
