@@ -5,12 +5,13 @@ import { BullModule } from '@nestjs/bullmq';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { ExpressAdapter } from '@bull-board/express';
 import { GameModule } from './business/game/game.module';
+import { config } from 'src/configs/config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     BullModule.forRoot({
-      connection: { host: 'localhost', port: 6223, db: 2, password: 'eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81' },
+      connection: { host: config.REDIS_HOST, port: config.REDIS_PORT, db: 2, password: config.REDIS_PASSWORD },
     }),
     BullBoardModule.forRoot({
       route: '/queues',
