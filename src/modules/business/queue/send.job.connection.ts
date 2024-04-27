@@ -1,9 +1,10 @@
 import { Queue } from "bullmq";
+import { config } from "src/configs/config";
 
 const redisOptions = {
-  port: 6223,
-  host: 'localhost',
-  password: 'eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81',
+  port: config.REDIS_PORT,
+  host: config.REDIS_HOST,
+  password: config.REDIS_PASSWORD,
   db: 2,
 };
 
