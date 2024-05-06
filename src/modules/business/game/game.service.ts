@@ -139,39 +139,6 @@ export class GameService {
         });
     }
 
-    async startGame(chatId: string, amount: number) {
-        const user = await this.getUser(chatId)
-
-        if (user.Wallet.WalletBalance.amountApp / 100 < amount) {
-            return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
-                chatId: chatId.toString(),
-                messageType: "notEnoughTokens",
-                amount: user.Wallet.WalletBalance.amountApp / 100
-            }));
-        }
-
-        // const shouldBotWin = await this.shouldBotWin();
-
-        const secKey = await this.sendToGameAddress();
-        // const cardList = await this.sendToHotAddress(secKey, shouldBotWin);
-        // const winner = await this.determineWinner(cardList);
-
-        // this.saveTransactions(user, amount * 100, winner);
-        // this.awardPrize(user, amount * 100 , winner);
-
-        // return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
-        //     chatId: chatId.toString(),
-        //     messageType: "gameResult",
-        //     // botCard1: cardList[0],
-        //     // botCard2: cardList[1],
-        //     // userCard1: cardList[2],
-        //     // userCard2: cardList[3],
-        //     botCardValue: this.BOT_CARD_VALUE,
-        //     userCardValue: this.USER_CARD_VALUE,
-        //     winner: winner
-        // });
-    }
-
     awardPrize(gameTransaction) {
         const winner = gameTransaction.winner;
         console.log('creatorWalletId  ---  ', gameTransaction.creatorWalletId, ' subscribeWalletId  ---  ', gameTransaction.subscribeWalletId)
@@ -456,36 +423,5 @@ export class GameService {
         })
         return !!gameTransaction ? true : false
     }
-
-    // async shouldBotWin() {
-    //     const address =  Address.fromKey(await this.getHotWalletSecKey()).setPrefix('rod').getBech32();
-    //     const url = `https://mainnet.umi.top/api/addresses/${address}/account`;
-    //     const response = await axios.get(url);
-
-    //     if(response.data.data.confirmedBalance <= 1000){
-    //         return true;
-    //     }
-
-    //     const walletGameTransation = await this.prismaService.walletGameTransaction.groupBy({
-    //         by: ['isWinner'],
-    //         _sum: {
-    //             amount: true,
-    //         },
-    //     });
-    //     console.log(walletGameTransation, 'walletGameTransation')
-
-    //     const winnerTrue = walletGameTransation.find(entry => entry.isWinner === true);
-    //     const winnerFalse = walletGameTransation.find(entry => entry.isWinner === false);
-    //     const botWinnCoefficient = winnerFalse._sum.amount / winnerTrue._sum.amount
-
-    //     const count = await this.prismaService.walletGameTransation.count({});
-    //     console.log(botWinnCoefficient)
-    //     if (count < 10) {
-    //         return true
-    //     } else {
-    //         return botWinnCoefficient <= config.AVAILABLE_BOT_WINNER_COEFFICIENT ? true : false
-    //     }
-    // }
-
 }
 
