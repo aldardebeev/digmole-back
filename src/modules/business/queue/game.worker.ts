@@ -67,10 +67,26 @@ export class AvailabelAmountWorker extends WorkerHost {
     }
 }
 
-@Processor(EQueue.START_GAME)
+@Processor(EQueue.CREATE_GAME)
 export class StartGameWorker extends WorkerHost { 
     constructor(private readonly gameService: GameService) { super()}
     async process(job: Job<{chatId: string, amount: number}, string, string>, token?: string): Promise<any> {
-        return await this.gameService.startGame(job.data.chatId, job.data.amount);
+        return await this.gameService.createGame(job.data.chatId, job.data.amount * 100);
+    }
+}
+
+@Processor(EQueue.FIND_GAME)
+export class FindGameWorker extends WorkerHost { 
+    constructor(private readonly gameService: GameService) { super()}
+    async process(job: Job<{chatId: string}, string, string>, token?: string): Promise<any> {
+        return await this.gameService.findGame(job.data.chatId);
+    }
+}
+
+@Processor(EQueue.JOIN_GAME)
+export class JoinGameWorker extends WorkerHost { 
+    constructor(private readonly gameService: GameService) { super()}
+    async process(job: Job<{chatId: string, transactionId: number}, string, string>, token?: string): Promise<any> {
+        return await this.gameService.JoinGame(job.data.chatId, job.data.transactionId);
     }
 }

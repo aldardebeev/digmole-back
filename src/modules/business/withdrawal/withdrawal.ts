@@ -6,8 +6,8 @@ import { getTx, getTxNotMnemonic } from './test';
 import gameQueue from "../queue/send.job.connection";
 import { EQueue } from 'src/libs/queues/queue.enum';
 import { randomUUID } from 'crypto';
-import { CcyEnum } from '@prisma/client';
 import { config } from 'src/configs/config';
+import { ECcy } from 'src/libs/ccy/ccy.enum';
 
 @Injectable()
 export class WithdrawalService {
@@ -61,7 +61,7 @@ export class WithdrawalService {
                 data: {
                     walletId: wallet.id,
                     addressTo: wallet.address,
-                    ccy: CcyEnum.rod,
+                    ccy: ECcy.ROD,
                     amount: amount,
                     tx: tx,
                 }
@@ -74,7 +74,7 @@ export class WithdrawalService {
                 where: {
                     walletId_ccy: {
                         walletId: wallet.id,
-                        ccy: CcyEnum.rod
+                        ccy: ECcy.ROD
                     }
                 },
                 data: {

@@ -11,20 +11,137 @@ import { cards } from 'src/libs/cards/cards.enum';
 import { EWinner } from 'src/libs/cards/winner.enum';
 import { ECcy } from 'src/libs/ccy/ccy.enum';
 import { config } from 'src/configs/config';
-import axios from 'axios';
+import { WalletService } from '../wallet/wallet';
 
 @Injectable()
 export class GameService {
     private readonly logger = new Logger(GameService.name);
     private GAME_TRANSACTION = '';
     private GAME_SESSION_TRANSACTION = [];
-    private BOT_CARD_VALUE = 0;
-    private USER_CARD_VALUE = 0
-    constructor(private readonly prismaService: PrismaService) { }
+    private CREATOR_CARD_VALUE = 0;
+    private SUBSCRIBE_CARD_VALUE = 0
+    constructor(
+        private readonly prismaService: PrismaService,
+        private readonly walletService: WalletService
+    ) { }
+
+    async createGame(chatId: string, amount: number) {
+        const user = await this.getUser(chatId);
+
+        if (user.Wallet.WalletBalance.amountApp < amount) {
+            return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+                chatId: chatId.toString(),
+                messageType: "notEnoughTokens",
+                amount: user.Wallet.WalletBalance.amountApp / 100
+            }));
+        }
+        if(await this.checkBetTransaction(chatId, amount)) {
+            return await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+                chatId: chatId.toString(),
+                messageType: "gameExist",
+                amount: amount / 100
+            });
+        }
+
+        const gameTransaction = await this.prismaService.walletGameTransaction.create({
+            data: {
+                creatorWalletId: user.Wallet.id,
+                ccy: ECcy.ROD,
+                amount: amount
+            }
+        })
+
+        return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+            chatId: chatId.toString(),
+            messageType: "createGame",
+            gameTransaction: gameTransaction,
+        });
+    }
+
+    async findGame(chatId: string) {
+        const user = await this.getUser(chatId);
+
+        if (!user) {
+            return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+                chatId: chatId.toString(),
+                messageType: "checkAvailableAmount",
+                isLink: false,
+            });
+        }
+
+        const transactions = await this.prismaService.walletGameTransaction.findMany({
+            take: 10,
+            where: {
+                NOT: {
+                    creatorWalletId: user.Wallet.id
+                },
+                subscribeWalletId: null,
+                tx: null,
+                winner: null
+            },
+            include: {
+              Wallet: {
+                include: {
+                    user: true
+                },
+              }
+            }
+        })
+     
+        return await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+            chatId: chatId.toString(),
+            messageType: "gameList",
+            transactions: transactions,
+        });
+    }
+
+    async JoinGame(chatId: string, transactionId: number) {
+        const subcribeUser = await this.getUser(chatId)
+        const gameTransaction = await this.getGameTransaction(transactionId)
+
+        if (!gameTransaction) {
+            return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+                chatId: chatId.toString(),
+                messageType: "gameIsOver"
+            }));
+        }
+        
+        if (subcribeUser.Wallet.WalletBalance.amountApp < gameTransaction.amount) {
+            return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+                chatId: chatId.toString(),
+                messageType: "notEnoughTokens",
+                amount: subcribeUser.Wallet.WalletBalance.amountApp / 100
+            }));
+        }
+
+        const secKey = await this.sendToGameAddress();
+        const cardList = await this.sendToHotAddress(secKey);
+        const winner = await this.determineWinner(cardList);
+        const creatorUser = await this.getCreatorUser(gameTransaction.creatorWalletId);
+
+        const newGameTransaction = await this.saveTransactions(subcribeUser, gameTransaction, winner);
+
+        if (winner !== EWinner.DRAW) {
+            this.awardPrize(newGameTransaction);
+        }
+
+        return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+            creatorChatId: creatorUser.chatId.toString(),
+            subcribeChatId: chatId.toString(),
+            messageType: "gameResult",
+            creatorCard1: cardList[0],
+            creatorCard2: cardList[1],
+            subscribeCard1: cardList[2],
+            subscribeCard2: cardList[3],
+            creatorCardValue: this.CREATOR_CARD_VALUE,
+            subscribeCardValue: this.SUBSCRIBE_CARD_VALUE,
+            winner: winner
+        });
+    }
 
     async startGame(chatId: string, amount: number) {
         const user = await this.getUser(chatId)
-      
+
         if (user.Wallet.WalletBalance.amountApp / 100 < amount) {
             return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
                 chatId: chatId.toString(),
@@ -33,59 +150,67 @@ export class GameService {
             }));
         }
 
-        const shouldBotWin = await this.shouldBotWin();
-        
-        const secKey = await this.sendToGameAddress();
-        const cardList = await this.sendToHotAddress(secKey, shouldBotWin);
-        const winner = await this.determineWinner(cardList);
-        
-        this.saveTransactions(user, amount * 100, winner);
-        this.awardPrize(user, amount * 100 , winner);
+        // const shouldBotWin = await this.shouldBotWin();
 
-        return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
-            chatId: chatId.toString(),
-            messageType: "gameResult",
-            botCard1: cardList[0],
-            botCard2: cardList[1],
-            userCard1: cardList[2],
-            userCard2: cardList[3],
-            botCardValue: this.BOT_CARD_VALUE,
-            userCardValue: this.USER_CARD_VALUE,
-            winner: winner
-        });
+        const secKey = await this.sendToGameAddress();
+        // const cardList = await this.sendToHotAddress(secKey, shouldBotWin);
+        // const winner = await this.determineWinner(cardList);
+
+        // this.saveTransactions(user, amount * 100, winner);
+        // this.awardPrize(user, amount * 100 , winner);
+
+        // return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+        //     chatId: chatId.toString(),
+        //     messageType: "gameResult",
+        //     // botCard1: cardList[0],
+        //     // botCard2: cardList[1],
+        //     // userCard1: cardList[2],
+        //     // userCard2: cardList[3],
+        //     botCardValue: this.BOT_CARD_VALUE,
+        //     userCardValue: this.USER_CARD_VALUE,
+        //     winner: winner
+        // });
     }
 
-    awardPrize(user, amount: number, winner: EWinner) { 
-        this.prismaService.$transaction(async () => {
-            const transactions = await this.prismaService.walletAppTrancation.create({
-                data: {
-                    walletId: user.Wallet.id,
-                    ccy: ECcy.ROD,
-                    amount: amount,
-                },
-              
-            })
+    awardPrize(gameTransaction) {
+        const winner = gameTransaction.winner;
+        console.log('creatorWalletId  ---  ', gameTransaction.creatorWalletId, ' subscribeWalletId  ---  ', gameTransaction.subscribeWalletId)
+        const winnerWalletId = winner === EWinner.CREATOR ? gameTransaction.creatorWalletId : gameTransaction.subscribeWalletId;
+        const loserWalletId = winner === EWinner.CREATOR ? gameTransaction.subscribeWalletId : gameTransaction.creatorWalletId;
 
-            amount = winner === EWinner.USER ? amount : winner === EWinner.BOT ? amount * -1 : 0;
-            const balance = await this.prismaService.walletBalance.update({
+        this.prismaService.$transaction(async () => {
+            await this.prismaService.walletBalance.update({
                 where: {
                     walletId_ccy: {
-                        walletId: user.Wallet.id,
+                        walletId: winnerWalletId,
                         ccy: ECcy.ROD
                     }
                 },
                 data: {
                     amountApp: {
-                        increment: amount,
+                        increment: gameTransaction.amount * 0.9,
                     },
                 }
+            });
 
-            })
-        })
-    } 
+            await this.prismaService.walletBalance.update({
+                where: {
+                    walletId_ccy: {
+                        walletId: loserWalletId,
+                        ccy: ECcy.ROD
+                    }
+                },
+                data: {
+                    amountApp: {
+                        decrement: gameTransaction.amount,
+                    },
+                }
+            });
+        });
+    }
 
-    saveTransactions(user, amount: number, winner: EWinner) {
-        this.prismaService.$transaction(async () => {
+    async saveTransactions(subcribeUser, walletGameTransaction, winner: EWinner) {
+        return await this.prismaService.$transaction(async () => {
             const sessionTransactions = this.GAME_SESSION_TRANSACTION.map(tx => {
                 return {
                     ccy: ECcy.ROD,
@@ -93,24 +218,23 @@ export class GameService {
                     tx: tx
                 };
             });
-            const transactions = await this.prismaService.walletGameTransation.create({
+
+            return await this.prismaService.walletGameTransaction.update({
+                where: {
+                    id: walletGameTransaction.id
+                },
                 data: {
-                    walletId: user.Wallet.id,
-                    ccy: ECcy.ROD,
-                    amount: amount,
+                    subscribeWalletId: subcribeUser.Wallet.id,
                     tx: this.GAME_TRANSACTION,
-                    isWinner: winner === EWinner.USER ? true : false,
+                    winner: winner,
                     WalletGameSessionTrancation: {
                         createMany: {
                             data: sessionTransactions
                         }
                     },
-                },
-                include: {
-                    WalletGameSessionTrancation: true
                 }
             })
-
+            
         })
     }
 
@@ -130,40 +254,28 @@ export class GameService {
     }
 
     async determineWinner(cardList: string[]) {
-        this.BOT_CARD_VALUE = await this.getCardValue([cardList[0], cardList[1]]);
-        this.USER_CARD_VALUE = await this.getCardValue([cardList[2], cardList[3]]);
+        this.CREATOR_CARD_VALUE = await this.getCardValue([cardList[0], cardList[1]]);
+        this.SUBSCRIBE_CARD_VALUE = await this.getCardValue([cardList[2], cardList[3]]);
 
-        if (this.BOT_CARD_VALUE === this.USER_CARD_VALUE) {
+        if (this.CREATOR_CARD_VALUE === this.SUBSCRIBE_CARD_VALUE) {
             return EWinner.DRAW;
-        } else if (this.BOT_CARD_VALUE > this.USER_CARD_VALUE) {
-            return EWinner.BOT;
+        } else if (this.CREATOR_CARD_VALUE > this.SUBSCRIBE_CARD_VALUE) {
+            return EWinner.CREATOR;
         } else {
-            return EWinner.USER;
+            return EWinner.SUBSCRIBE;
         }
     }
 
-    async sendToHotAddress(secKeyGame: SecretKey, shouldBotWin: boolean) {
+    async sendToHotAddress(secKeyGame: SecretKey) {
         const sender = Address.fromKey(secKeyGame).setPrefix('rod').getBech32();
         const secKeyHotWallet = await this.getHotWalletSecKey();
         const recipient = Address.fromKey(secKeyHotWallet).setPrefix('rod').getBech32();
-        let determineWinner: EWinner;
-        let txCardList: any[];
 
-        if (shouldBotWin) {
-            let winner: EWinner;
-            do {
-                const cardList = await this.getCardList(secKeyGame, sender, recipient);
-                winner = await this.determineWinner(cardList.map(tx => tx.card));
-                txCardList = cardList
-            } while (winner !== EWinner.BOT);
-            determineWinner = winner;
-        } else {
-            const cardList = await this.getCardList(secKeyGame, sender, recipient);
-            txCardList = cardList
-            determineWinner = await this.determineWinner(cardList.map(tx => tx.card));
-        }
+        const cardList = await this.getCardList(secKeyGame, sender, recipient);
+        const winner = await this.determineWinner(cardList.map(tx => tx.card));
 
-        for (const tx of txCardList.map(tx => tx.tx)) {
+
+        for (const tx of cardList.map(tx => tx.tx)) {
             try {
                 let result: { error: { code: number; }; };
                 do {
@@ -187,7 +299,7 @@ export class GameService {
             }
         }
 
-        return txCardList.map(tx => tx.card)
+        return cardList.map(tx => tx.card)
     }
 
     async getCardList(secKeyGame: SecretKey, sender: string, recipient: string) {
@@ -305,35 +417,75 @@ export class GameService {
         return user
     }
 
-    async shouldBotWin() {
-        const address =  Address.fromKey(await this.getHotWalletSecKey()).setPrefix('rod').getBech32();
-        const url = `https://mainnet.umi.top/api/addresses/${address}/account`;
-        const response = await axios.get(url);
-
-        if(response.data.data.confirmedBalance <= 1000){
-            return true;
-        }
-
-        const walletGameTransation = await this.prismaService.walletGameTransation.groupBy({
-            by: ['isWinner'],
-            _sum: {
-                amount: true,
-            },
-        });
-        console.log(walletGameTransation, 'walletGameTransation')
+    async getGameTransaction(transactionId: number) {
+        const gameTransaction = await this.prismaService.walletGameTransaction.findFirst({
+            where: {
+                id: transactionId,
+                winner: null,
+            }
+        })
        
-        const winnerTrue = walletGameTransation.find(entry => entry.isWinner === true);
-        const winnerFalse = walletGameTransation.find(entry => entry.isWinner === false);
-        const botWinnCoefficient = winnerFalse._sum.amount / winnerTrue._sum.amount
-
-        const count = await this.prismaService.walletGameTransation.count({});
-        console.log(botWinnCoefficient)
-        if (count < 10) {
-            return true
-        } else {
-            return botWinnCoefficient <= config.AVAILABLE_BOT_WINNER_COEFFICIENT ? true : false
-        }
+        return gameTransaction
     }
+
+    async getCreatorUser(walletId: number) {
+        const user = await this.prismaService.user.findFirst({
+            where: {
+                Wallet: {
+                    id: walletId
+                }
+            },
+        })
+
+        return user
+    }
+
+    async checkBetTransaction(chatId: string, amount: number){
+        const gameTransaction = await this.prismaService.walletGameTransaction.findFirst({
+            where: {
+                winner: null,
+                tx: null,
+                subscribeWalletId: null,
+                amount: amount,
+                Wallet: {
+                    user: {
+                        chatId: chatId.toString()
+                    }
+                }
+            }
+        })
+        return !!gameTransaction ? true : false
+    }
+
+    // async shouldBotWin() {
+    //     const address =  Address.fromKey(await this.getHotWalletSecKey()).setPrefix('rod').getBech32();
+    //     const url = `https://mainnet.umi.top/api/addresses/${address}/account`;
+    //     const response = await axios.get(url);
+
+    //     if(response.data.data.confirmedBalance <= 1000){
+    //         return true;
+    //     }
+
+    //     const walletGameTransation = await this.prismaService.walletGameTransaction.groupBy({
+    //         by: ['isWinner'],
+    //         _sum: {
+    //             amount: true,
+    //         },
+    //     });
+    //     console.log(walletGameTransation, 'walletGameTransation')
+
+    //     const winnerTrue = walletGameTransation.find(entry => entry.isWinner === true);
+    //     const winnerFalse = walletGameTransation.find(entry => entry.isWinner === false);
+    //     const botWinnCoefficient = winnerFalse._sum.amount / winnerTrue._sum.amount
+
+    //     const count = await this.prismaService.walletGameTransation.count({});
+    //     console.log(botWinnCoefficient)
+    //     if (count < 10) {
+    //         return true
+    //     } else {
+    //         return botWinnCoefficient <= config.AVAILABLE_BOT_WINNER_COEFFICIENT ? true : false
+    //     }
+    // }
 
 }
 

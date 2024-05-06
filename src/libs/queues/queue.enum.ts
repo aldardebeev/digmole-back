@@ -8,5 +8,7 @@ export enum EQueue {
   EXISTS_WALLET = 'exists-wallet',
   BALANCE = 'balance',
   AVAILABLE_AMOUNT = 'available-amount',
-  START_GAME = 'start-game',
+  CREATE_GAME = 'create-game',
+  FIND_GAME = 'find-game',
+  JOIN_GAME = 'join-game',
 }

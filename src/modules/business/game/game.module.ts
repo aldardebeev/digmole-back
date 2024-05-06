@@ -7,7 +7,8 @@ import { PrismaModule } from 'src/modules/infrastructure/prisma/prisma.module';
 import { 
   StartBotWorker, CheckSignatureWorker, ReplishmentWalletWorker,
   WithdrawalWorker, CheckWalletWorker, BalanceWorker,
-  AvailabelAmountWorker, StartGameWorker
+  AvailabelAmountWorker, StartGameWorker, FindGameWorker,
+  JoinGameWorker
 } from '../queue/game.worker';
 import { ReplishmentWalletService } from '../replishment-wallet/replishment-wallet-service';
 import { WithdrawalService } from '../withdrawal/withdrawal';
@@ -27,7 +28,8 @@ import { GameService } from './game.service';
     UserService, ReplishmentWalletService, StartBotWorker,
     CheckSignatureWorker, ReplishmentWalletWorker, WithdrawalWorker,
     WithdrawalService, CheckWalletWorker, WalletService,
-    BalanceWorker, AvailabelAmountWorker, StartGameWorker, GameService
+    BalanceWorker, AvailabelAmountWorker, StartGameWorker, GameService,
+    FindGameWorker, JoinGameWorker
   ],
 })
 export class GameModule implements OnApplicationBootstrap {

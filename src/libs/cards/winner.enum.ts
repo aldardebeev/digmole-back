@@ -1,5 +1,5 @@
 export enum EWinner {
-  USER = 'user',
-  BOT = 'bot',
-  DRAW = 'draw',
+  CREATOR = 'creator',
+  SUBSCRIBE = 'subscribe',
+  DRAW = 'draw'
 }

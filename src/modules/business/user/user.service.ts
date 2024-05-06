@@ -4,7 +4,8 @@ import { Address, PublicKey, SecretKey, Transaction, textEncode, base64Decode, h
 import gameQueue from "../queue/send.job.connection";
 import { randomUUID } from "crypto"
 import { EQueue } from "../../../libs/queues/queue.enum"
-import { CcyEnum } from '@prisma/client';
+import { ECcy } from 'src/libs/ccy/ccy.enum';
+
 
 @Injectable()
 export class UserService {
@@ -15,8 +16,7 @@ export class UserService {
         try {
 
             if (await this.userExists(chatId)) {
-                console.log("user exists")
-                return;
+                return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), { chatId: chatId.toString(), messageType: "invalidAddress" });
             }
 
             if (!this.isValidAdress(address)) {
@@ -36,7 +36,7 @@ export class UserService {
                             signaturePhrase: randomMessage,
                             WalletBalance: {
                                 create: {
-                                    ccy: CcyEnum.rod
+                                    ccy: ECcy.ROD
                                 }
                             }
                         },

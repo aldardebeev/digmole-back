@@ -3,7 +3,7 @@ import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import gameQueue from "../queue/send.job.connection";
 import { EQueue } from 'src/libs/queues/queue.enum';
 import { randomUUID } from 'crypto';
-import { CcyEnum } from '@prisma/client';
+import { ECcy } from 'src/libs/ccy/ccy.enum';
 @Injectable()
 export class WalletService {
     constructor(
@@ -63,7 +63,7 @@ export class WalletService {
                     include: {
                         WalletBalance: {
                             where: {
-                                ccy: CcyEnum.rod
+                                ccy: ECcy.ROD
                             }
                         }
                     }
