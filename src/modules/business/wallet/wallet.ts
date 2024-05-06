@@ -24,7 +24,7 @@ export class WalletService {
             chatId: chatId.toString(),
             messageType: "checkAvailableAmount",
             isLink: isLink,
-            availableAmount: isLink ? await this.getBalance(chatId) >= 10000 ? true : false : 0,
+            availableAmount: isLink ? await this.getBalance(chatId) >= 100 ? true : false : 0,
         });
     }
 
