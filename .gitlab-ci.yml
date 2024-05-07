@@ -1,2 +1,0 @@
-include:
-  remote: 'https://gitlab.smartworld.team/incude/ci-cd-pipeline/-/raw/main/rod-jack/backend/.gitlab-ci.yml'

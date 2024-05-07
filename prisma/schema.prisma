@@ -18,139 +18,49 @@ model User {
   chatId    String   @unique @map("chat_id")
   username  String   @map("username") @db.VarChar(256)
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  Wallet    Wallet?
+  balance   Int      @map("balance")
+
+  ReferralCodes    ReferralCode?
+  ReferralCodeUser ReferralCodeUser[]
+  Maning           Maning[]
 
   @@index([id])
   @@map("users")
 }
 
-model Wallet {
+model Maning {
   id     Int  @id @default(autoincrement())
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  User   User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId Int  @unique @map("user_id")
-
-  address String @unique @map("address")
-
-  signaturePhrase String? @map("signature_phrase") @db.VarChar(256)
-
-  WalletInputTrancation      WalletInputTranscation[]
-  WalletWithdrawalTrancation WalletWithdrawalTranscation[]
-  WalletAppTrancation        WalletAppTrancation[]
-  WalletGameTransation       WalletGameTransaction[]
-  WalletBalance              WalletBalance?
-
+  createdAt DateTime @default(now()) @map("created_at")
+  finishAt  DateTime?  @map("finish_at")
+  
   @@index([id])
-  @@map("wallets")
+  @@map("manings")
 }
 
-model WalletBalance {
-  id Int @id @default(autoincrement())
+model ReferralCode {
+  id     Int    @id @default(autoincrement())
+  User   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId Int    @unique @map("user_id")
+  code   String @map("code")
 
-  Wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  walletId Int    @unique @map("wallet_id")
+  ReferralCodeUser ReferralCodeUser[]
 
-  ccy            String @map("ccy")
-  amountApp      Float   @default(0) @map("amount_app")
-  amountExternal Float   @default(0) @map("amount_external")
-
-  @@unique([walletId, ccy])
   @@index([id])
-  @@map("wallet_balances")
+  @@map("referral_codes")
 }
 
-model WalletAppTrancation {
-  id Int @id @default(autoincrement())
+model ReferralCodeUser {
+  id     Int  @id @default(autoincrement())
+  User   User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId Int  @map("user_id")
 
-  Wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  walletId Int    @map("wallet_id")
-
-  ccy    String  @map("ccy")
-  amount Float   @map("amount")
+  ReferralCodes ReferralCode @relation(fields: [codeId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  codeId        Int           @map("code_id")
 
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([id])
-  @@map("wallet_app_transcations")
+  @@map("referral_code_users")
 }
-
-model WalletInputTranscation {
-  id Int @id @default(autoincrement())
-
-  Wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  walletId Int    @map("wallet_id")
-
-  ccy    String @map("ccy")
-  amount Float
-  tx     String  @unique @map("tx")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  checkedAt DateTime? @map("checked_at")
-
-  closedAt        DateTime? @map("closed_at")
-  reasonForClosed String?   @map("reason_for_closed") @db.VarChar(256)
-
-  @@index([id])
-  @@map("wallet_input_transcations")
-}
-
-model WalletWithdrawalTranscation {
-  id Int @id @default(autoincrement())
-
-  Wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  walletId Int    @map("wallet_id")
-
-  addressTo String  @map("address_to")
-  ccy       String @map("ccy")
-  amount    Float
-  tx        String  @unique @map("tx")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  checkedAt DateTime? @map("checked_at")
-
-  closedAt        DateTime? @map("closed_at")
-  reasonForClosed String?   @map("reason_for_closed") @db.VarChar(256)
-
-  @@index([id])
-  @@map("wallet_withdrawal_transcations")
-}
-
-model WalletGameTransaction {
-  id Int @id @default(autoincrement())
-
-  Wallet            Wallet @relation(fields: [creatorWalletId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  creatorWalletId   Int    @map("creator_wallet_id")
-  subscribeWalletId Int?    @map("subscribe_wallet_id")
-
-  ccy       String  @map("ccy")
-  amount    Float    @map("amount")
-  tx        String?   @map("tx")
-  winner    String?      @map("winner")
-  createdAt DateTime @default(now()) @map("created_at")
-
-  WalletGameSessionTrancation WalletGameSessionTransation[]
-
-  @@index([id])
-  @@map("wallet_game_transcations")
-}
-
-model WalletGameSessionTransation {
-  id Int @id @default(autoincrement())
-
-  WalletGameTransation    WalletGameTransaction @relation(fields: [WalletGameTransactionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  WalletGameTransactionId Int                   @map("wallet_game_transaction_id")
-
-  ccy    String @map("ccy")
-  amount Float   @map("amount")
-  tx     String  @map("tx")
-
-  createdAt DateTime @default(now()) @map("created_at")
-
-  @@index([id])
-  @@map("wallet_game_session_transcations")
-}
-
