@@ -18,9 +18,9 @@ model User {
   chatId    String   @unique @map("chat_id")
   username  String   @map("username") @db.VarChar(256)
   createdAt DateTime @default(now()) @map("created_at")
-  balance   Int      @map("balance")
+  balance   Int      @default(0)@map("balance")
 
-  ReferralCodes    ReferralCode?
+  ReferralCode    ReferralCode?
   ReferralCodeUser ReferralCodeUser[]
   Maning           Maning[]
 
@@ -34,6 +34,7 @@ model Maning {
   userId Int  @unique @map("user_id")
   createdAt DateTime @default(now()) @map("created_at")
   finishAt  DateTime?  @map("finish_at")
+  status  ManingStatus @default(ACTIVE)@map("status")
   
   @@index([id])
   @@map("manings")
@@ -63,4 +64,9 @@ model ReferralCodeUser {
 
   @@index([id])
   @@map("referral_code_users")
+}
+
+enum ManingStatus {
+  ACTIVE
+  COMPLETED
 }

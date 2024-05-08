@@ -5,16 +5,11 @@ import { EQueue } from 'src/libs/queues/queue.enum';
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { PrismaModule } from 'src/modules/infrastructure/prisma/prisma.module';
 import { 
-  StartBotWorker, CheckSignatureWorker, ReplishmentWalletWorker,
-  WithdrawalWorker, CheckWalletWorker, BalanceWorker,
-  AvailabelAmountWorker, StartGameWorker, FindGameWorker,
-  JoinGameWorker
+  StartBotWorker,  BalanceWorker, StartGameWorker, 
 } from '../queue/game.worker';
-import { ReplishmentWalletService } from '../replishment-wallet/replishment-wallet-service';
-import { WithdrawalService } from '../withdrawal/withdrawal';
-import { WalletService } from '../wallet/wallet';
 import { UserService } from '../user/user.service';
 import { GameService } from './game.service';
+import { ReplishmentWalletService } from '../replishment-wallet/replishment-wallet-service';
 
 @Module({
   imports: [
@@ -25,12 +20,8 @@ import { GameService } from './game.service';
     ]),
   ],
   providers: [
-    UserService, ReplishmentWalletService, StartBotWorker,
-    CheckSignatureWorker, ReplishmentWalletWorker, WithdrawalWorker,
-    WithdrawalService, CheckWalletWorker, WalletService,
-    BalanceWorker, AvailabelAmountWorker, StartGameWorker, GameService,
-    FindGameWorker, JoinGameWorker
-  ],
+    UserService, StartBotWorker, BalanceWorker, StartGameWorker, GameService, ReplishmentWalletService
+       ],
 })
 export class GameModule implements OnApplicationBootstrap {
   constructor(private readonly replishmentWalletService: ReplishmentWalletService) {}

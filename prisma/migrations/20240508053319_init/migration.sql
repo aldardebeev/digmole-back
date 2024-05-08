@@ -1,10 +1,13 @@
+-- CreateEnum
+CREATE TYPE "ManingStatus" AS ENUM ('ACTIVE', 'COMPLETED');
+
 -- CreateTable
 CREATE TABLE "users" (
     "id" SERIAL NOT NULL,
     "chat_id" TEXT NOT NULL,
     "username" VARCHAR(256) NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "balance" INTEGER NOT NULL,
+    "balance" INTEGER NOT NULL DEFAULT 0,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
@@ -15,6 +18,7 @@ CREATE TABLE "manings" (
     "user_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "finish_at" TIMESTAMP(3),
+    "status" "ManingStatus" NOT NULL DEFAULT 'ACTIVE',
 
     CONSTRAINT "manings_pkey" PRIMARY KEY ("id")
 );

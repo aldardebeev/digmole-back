@@ -1,128 +1,55 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
-import { Address, PublicKey, SecretKey, Transaction, textEncode, base64Decode, hexEncode, base64Encode } from '@umi-top/umi-core-js'
 import gameQueue from "../queue/send.job.connection";
 import { randomUUID } from "crypto"
 import { EQueue } from "../../../libs/queues/queue.enum"
-import { ECcy } from 'src/libs/ccy/ccy.enum';
-
 
 @Injectable()
 export class UserService {
     private readonly logger = new Logger(UserService.name);
     constructor(private readonly prismaService: PrismaService) { }
     
-    async createUser(chatId: string, username: string, address: string): Promise<any> {
+    async createUser(chatId: string, username: string): Promise<any> {
         try {
-
-            if (await this.userExists(chatId)) {
-                return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), { chatId: chatId.toString(), messageType: "invalidAddress" });
-            }
-
-            if (!this.isValidAdress(address)) {
-                console.log("addres invalid")
-                return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), { chatId: chatId.toString(), messageType: "invalidAddress" });
+            if (await this.getUser(chatId)) {
+                console.log("userExists")
+                return;
             }
             
-            const randomMessage = this.generateRandomMessage()
-
-            const user = await this.prismaService.user.create({
+            await this.prismaService.user.create({
                 data: {
                     chatId: chatId.toString(),
                     username: username,
-                    Wallet: {
+                    ReferralCode: {
                         create: {
-                            address: address,
-                            signaturePhrase: randomMessage,
-                            WalletBalance: {
-                                create: {
-                                    ccy: ECcy.ROD
-                                }
-                            }
-                        },
-                        
-                    }
-                },
-                include: {
-                    Wallet: {
-                        include: {
-                            WalletBalance: true
+                            code: randomUUID(),
                         }
                     }
-                },
+                }
             });
+
             console.log("create")
-            return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
-                chatId: chatId.toString(),
-                messageType: "createUser",
-                phrase: randomMessage
-            }));
         } catch (error) {
             this.logger.error(`Error creating user: ${error.message}`);
             throw error;
         }
     }
 
-    private async userExists(chatId: string): Promise<boolean> {
+    private async getUser(chatId: string) {
         const user = await this.prismaService.user.findFirst({
             where: {
                 chatId: chatId.toString(),
             },
         });
-        return !!user;
-    }
+        return user;
+    }  
 
-    private isValidAdress(address: string) {
-        try {
-            Address.fromBech32(address)
-            console.log( Address.fromBech32(address))
-            return true
-        } catch (error) {
-            return false
-        }
-    }
-
-    private generateRandomMessage(): string {
-        const prefix = "blackjack_rod_";
-        const randomString = Math.random().toString(36).substring(2, 15);
-        return prefix + randomString;
-    }
-
-    async checkSignature(chatId: string, signature: string): Promise<any> {
-        const user = await this.prismaService.user.findFirst({
-            where: {
-                chatId: chatId.toString(),
-            },
-            include: {
-                Wallet: true,
-            }
+    async balance(chatId: string){
+        return gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
+            chatId: chatId.toString(),
+            messageType: "balance",
+            amount: await this.getUser(chatId).then(user => user.balance)
         });
-       
-
-        const pubKey = Address.fromBech32(user.Wallet.address).getPublicKey()
-        
-        try{
-            const isValid = pubKey.verifySignature(base64Decode(signature), textEncode(user.Wallet.signaturePhrase))
-            return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
-                chatId: chatId.toString(),
-                messageType: "checkSignature",
-                address: user.Wallet.address,
-                isValid: isValid
-            }));
-        }catch(error){
-            await this.prismaService.user.delete({
-                where: {
-                    chatId: chatId.toString(),
-                }
-            });
-            return (await gameQueue(EQueue.NOTIFICATION).add(randomUUID(), {
-                chatId: chatId.toString(),
-                messageType: "checkSignature",
-                address: user.Wallet.address,
-                isValid: false
-            }));
-        }
     }
-    
 }
 
